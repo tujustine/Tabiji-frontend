@@ -1,0 +1,199 @@
+/**
+ * Page des souvenirs d'un voyage
+ * Affiche le tableau blanc interactif
+ */
+
+"use client";
+
+import { useEffect, useState, use } from "react";
+import dynamic from "next/dynamic";
+
+// Composant client-only pour éviter les problèmes SSR
+const MemoriesCanvas = dynamic(
+  () => import("@/components/memories/MemoriesCanvas"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
+        <div className="text-xl text-gray-700">Chargement...</div>
+      </div>
+    ),
+  }
+);
+import { useAuth } from "@/contexts/AuthContext";
+import type { Memory } from "@/types";
+
+interface MemoriesPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default function MemoriesPage({ params }: MemoriesPageProps) {
+  const { id } = use(params);
+  const { user } = useAuth();
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [tripTitle, setTripTitle] = useState<string>("Tableau des souvenirs");
+  const [canEdit, setCanEdit] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Plus de redirection côté client - géré par le middleware côté serveur
+
+  // Fonction pour lire les cookies
+  const getCookie = (name: string): string | null => {
+    if (globalThis.window === undefined) return null;
+    const nameEQ = name + "=";
+    const ca = document.cookie.split(";");
+    for (const c of ca) {
+      let cookie = c;
+      while (cookie.charAt(0) === " ")
+        cookie = cookie.substring(1, cookie.length);
+      if (cookie.indexOf(nameEQ) === 0)
+        return cookie.substring(nameEQ.length, cookie.length);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = getCookie("token");
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
+          "http://localhost:4000";
+
+        // Récupérer les informations du voyage
+        const tripResponse = await fetch(`${apiUrl}/trip/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (tripResponse.ok) {
+          const tripData = await tripResponse.json();
+          setTripTitle(tripData.title || "Tableau des souvenirs");
+          setCanEdit(tripData.userPermissions?.canEdit || false);
+        }
+
+        // Récupérer les souvenirs
+        const memoriesResponse = await fetch(`${apiUrl}/trip/${id}/memories`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!memoriesResponse.ok) {
+          throw new Error("Erreur lors du chargement");
+        }
+
+        const data = await memoriesResponse.json();
+        // Convertir les données de l'API vers le format Memory
+        const formattedMemories: Memory[] = data.map(
+          (m: {
+            id: string;
+            type: string;
+            content: string;
+            position: { x: number; y: number };
+            size: { width: number; height: number };
+            zIndex?: number;
+          }) => ({
+            id: m.id,
+            type: m.type,
+            content: m.content,
+            position: m.position as { x: number; y: number },
+            size: m.size as { width: number; height: number },
+            zIndex: m.zIndex || 0,
+          })
+        );
+        setMemories(formattedMemories);
+      } catch (error) {
+        console.error("Erreur:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchData();
+    }
+  }, [id, user]);
+
+  const handleSave = async (updatedMemories: Memory[]) => {
+    const token = getCookie("token");
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
+      "http://localhost:4000";
+
+    // Pour chaque mémoire, créer ou mettre à jour via l'API
+    for (const memory of updatedMemories) {
+      try {
+        if (memory.id.startsWith("temp-")) {
+          // Nouvelle mémoire à créer
+          const response = await fetch(`${apiUrl}/trip/${id}/memory`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              type: memory.type,
+              content: memory.content,
+              position: memory.position,
+              size: memory.size,
+              zIndex: memory.zIndex,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Erreur lors de la création");
+          }
+        } else {
+          // Mémoire existante à mettre à jour
+          const response = await fetch(`${apiUrl}/memory/${memory.id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              type: memory.type,
+              content: memory.content,
+              position: memory.position,
+              size: memory.size,
+              zIndex: memory.zIndex,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Erreur lors de la mise à jour");
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde:", error);
+        throw error;
+      }
+    }
+
+    setMemories(updatedMemories);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
+        <div className="text-xl text-gray-700">Chargement...</div>
+      </div>
+    );
+  }
+
+  return (
+    <MemoriesCanvas
+      tripId={id}
+      memories={memories}
+      onSave={handleSave}
+      tripTitle={tripTitle}
+      canEdit={canEdit}
+    />
+  );
+}
