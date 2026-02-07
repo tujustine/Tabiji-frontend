@@ -44,7 +44,7 @@ export default function PlaceAutocomplete({
 
   // Gérer les changements de valeur depuis les props (pour l'édition)
   useEffect(() => {
-    if (isControlled && value && value !== query) {
+    if (isControlled && value) {
       setQuery(value);
       setResults([]); // Vider les résultats
     }
