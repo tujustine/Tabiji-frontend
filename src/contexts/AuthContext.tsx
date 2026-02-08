@@ -197,7 +197,11 @@ export function AuthProvider({
       dispatch({ type: "LOGIN_START" });
 
       try {
-        const response = await fetch(`http://localhost:4000/user/login`, {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
+          "http://localhost:4000";
+        const response = await fetch(`${apiUrl}/user/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -239,7 +243,11 @@ export function AuthProvider({
       dispatch({ type: "SIGNUP_START" });
 
       try {
-        const response = await fetch(`http://localhost:4000/user/signup`, {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
+          "http://localhost:4000";
+        const response = await fetch(`${apiUrl}/user/signup`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -306,7 +314,11 @@ export function AuthProvider({
           updateData.password = password;
         }
 
-        const response = await fetch(`http://localhost:4000/user/update`, {
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
+          "http://localhost:4000";
+        const response = await fetch(`${apiUrl}/user/update`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -351,16 +363,17 @@ export function AuthProvider({
         const formData = new FormData();
         formData.append("photo", file);
 
-        const response = await fetch(
-          `http://localhost:4000/user/upload-photo`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            body: formData,
-          }
-        );
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
+          "http://localhost:4000";
+        const response = await fetch(`${apiUrl}/user/upload-photo`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
 
         if (!response.ok) {
           throw new Error("Upload failed");
