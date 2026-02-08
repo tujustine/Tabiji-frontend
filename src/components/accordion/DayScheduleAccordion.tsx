@@ -95,7 +95,7 @@ export default function DayScheduleAccordion({
   };
 
   // Préparer les jours avec leurs dates
-  const prepareDays = (): DaySchedule[] => {
+  const days = useMemo(() => {
     if (!startDate || !endDate) return [];
 
     const start = new Date(startDate);
@@ -126,9 +126,7 @@ export default function DayScheduleAccordion({
       }
     }
     return days;
-  };
-
-  const days = useMemo(() => prepareDays(), [startDate, endDate, daySchedule]);
+  }, [startDate, endDate, daySchedule]);
 
   const getPlacesForDay = (day: DaySchedule) => {
     // Créer un map pour un accès rapide
