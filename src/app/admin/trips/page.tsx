@@ -36,13 +36,13 @@ export default function AdminTripsPage() {
     (trip) =>
       trip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       trip.destination?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      trip.owner.username.toLowerCase().includes(searchQuery.toLowerCase())
+      trip.owner.username.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleDelete = async (tripId: string) => {
     if (
       !confirm(
-        "Êtes-vous sûr de vouloir supprimer ce voyage ? Cette action est irréversible."
+        "Êtes-vous sûr de vouloir supprimer ce voyage ? Cette action est irréversible.",
       )
     ) {
       return;
@@ -52,7 +52,7 @@ export default function AdminTripsPage() {
       await deleteTrip(tripId);
       // Mettre à jour l'état local en supprimant le voyage supprimé
       setAllTrips((prevTrips) =>
-        prevTrips.filter((trip) => trip.id !== tripId)
+        prevTrips.filter((trip) => trip.id !== tripId),
       );
     } catch (err) {
       console.error("Erreur lors de la suppression:", err);
@@ -82,9 +82,7 @@ export default function AdminTripsPage() {
     return filteredTrips.map((trip) => (
       <tr key={trip.id} className="hover:bg-gray-50">
         <td className="px-6 py-4">
-          <div className="text-sm font-medium text-gray-900">
-            {trip.title}
-          </div>
+          <div className="text-sm font-medium text-gray-900">{trip.title}</div>
           {trip.description && (
             <div className="text-sm text-gray-500 truncate max-w-xs">
               {trip.description}
@@ -92,12 +90,8 @@ export default function AdminTripsPage() {
           )}
         </td>
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="text-sm text-gray-900">
-            {trip.owner.username}
-          </div>
-          <div className="text-sm text-gray-500">
-            {trip.owner.email}
-          </div>
+          <div className="text-sm text-gray-900">{trip.owner.username}</div>
+          <div className="text-sm text-gray-500">{trip.owner.email}</div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           <div>Lieux: {trip._count?.places || 0}</div>
@@ -154,7 +148,6 @@ export default function AdminTripsPage() {
               </p>
             )}
             <div className="space-y-1 text-sm text-gray-500">
-              <p>📍 Destination: {trip.destination || "Non spécifiée"}</p>
               <p>
                 📅 Créé le{" "}
                 {new Date(trip.createdAt).toLocaleDateString("fr-FR")}
@@ -263,7 +256,8 @@ export default function AdminTripsPage() {
       {/* Compteur de résultats */}
       <div className="mb-4 text-sm text-gray-600">
         {filteredTrips.length} voyage{filteredTrips.length > 1 ? "s" : ""}{" "}
-        {searchQuery && ` trouvé${filteredTrips.length > 1 ? "s" : ""} pour "${searchQuery}"`}
+        {searchQuery &&
+          ` trouvé${filteredTrips.length > 1 ? "s" : ""} pour "${searchQuery}"`}
       </div>
 
       {/* Tableau Desktop */}
@@ -293,9 +287,7 @@ export default function AdminTripsPage() {
       </div>
 
       {/* Cartes Mobile */}
-      <div className="md:hidden space-y-4">
-        {renderMobileCards()}
-      </div>
+      <div className="md:hidden space-y-4">{renderMobileCards()}</div>
     </div>
   );
 }

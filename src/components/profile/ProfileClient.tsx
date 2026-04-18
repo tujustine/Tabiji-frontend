@@ -289,7 +289,7 @@ export default function ProfileClient() {
     <div className="min-h-screen bg-[#f6e6d1] py-8">
       {(successMessage || errorMessage) && (
         <output
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] space-y-2 text-center"
+          className="fixed top-4 left-1/2 -translate-x-1/2 z-[1200] space-y-2 text-center"
           aria-live="polite"
         >
           {successMessage && (
@@ -321,9 +321,9 @@ export default function ProfileClient() {
 
             {/* Contenu principal du passeport */}
             <div className="bg-white/95 rounded-lg p-6">
-              <div className="flex md:flex-row gap-6">
+              <div className="flex flex-col md:flex-row gap-6">
                 {/* Photo de profil */}
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex justify-center md:justify-start">
                   <button
                     type="button"
                     className="w-40 h-52 border-4 border-gray-400 bg-gray-100 overflow-hidden cursor-pointer relative group hover:border-[#7a8450] transition-colors"
@@ -355,7 +355,7 @@ export default function ProfileClient() {
                 </div>
 
                 {/* Informations du passeport */}
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 min-w-0 space-y-4 w-full">
                   {/* Nom d'utilisateur */}
                   <div className="border-b border-gray-300 pb-2">
                     <label
@@ -369,7 +369,7 @@ export default function ProfileClient() {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full text-lg font-bold text-gray-800 bg-transparent border-none focus:outline-none focus:ring-0 px-0 py-1"
+                      className="w-full min-w-0 text-lg font-bold text-gray-800 bg-transparent border-none focus:outline-none focus:ring-0 px-0 py-1"
                     />
                   </div>
 
@@ -378,7 +378,7 @@ export default function ProfileClient() {
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Email / Email
                     </div>
-                    <p className="text-lg font-medium text-gray-800">
+                    <p className="text-lg font-medium text-gray-800 break-words">
                       {user?.email || "email@example.com"}
                     </p>
                   </div>
@@ -397,7 +397,7 @@ export default function ProfileClient() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Modifier le mot de passe"
-                      className="w-full text-lg font-medium text-gray-800 bg-transparent border-none focus:outline-none focus:ring-0 px-0 py-1"
+                      className="w-full min-w-0 text-lg font-medium text-gray-800 bg-transparent border-none focus:outline-none focus:ring-0 px-0 py-1"
                     />
                   </div>
 

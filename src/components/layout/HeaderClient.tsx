@@ -7,11 +7,10 @@ import NavigationSuspense from "./NavigationSuspense";
 
 export default function Header() {
   return (
-    <header className="bg-[#f6e6d1] shadow-sm font-bagel relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="fixed left-0 right-0 top-0 z-[1100] border-b border-[#f6e6d1]/15 bg-[#0f1210]/55 font-bagel text-[#f6e6d1] backdrop-blur-md transition-[background-color,backdrop-filter] duration-300 supports-[backdrop-filter]:bg-[#0f1210]/45">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Desktop Layout */}
-        <div className="hidden md:flex justify-between items-center h-24">
-          {/* Logo à gauche */}
+        <div className="hidden h-24 items-center justify-between md:flex">
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center">
               <Image
@@ -25,16 +24,12 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Navigation desktop */}
           <NavigationSuspense />
         </div>
 
-        {/* Mobile Layout */}
-        <div className="md:hidden flex justify-between items-center h-24">
-          {/* Espace gauche vide pour équilibrer */}
+        <div className="flex h-24 items-center justify-between md:hidden">
           <div className="w-12"></div>
 
-          {/* Logo au centre */}
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center">
               <Image
@@ -48,7 +43,6 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Menu burger à droite */}
           <div className="flex-shrink-0">
             <NavigationSuspense />
           </div>

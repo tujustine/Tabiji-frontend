@@ -12,31 +12,26 @@ import {
   IoMdLogOut,
 } from "react-icons/io";
 
+const mobileMenuPanel =
+  "border-b border-[#f6e6d1]/10 bg-[#1a1f1c]/95 shadow-lg backdrop-blur-md md:hidden";
+
 export default function NavigationSuspense() {
   const { user, logout, isLoggingOut, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Fonction pour vérifier si un lien est actif
   const isActiveLink = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
-    }
+    if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
 
-  // Classes CSS pour les liens actifs/inactifs
-  const getLinkClasses = (href: string, isMobile = false) => {
-    const baseClasses = isMobile
-      ? "block text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-base font-medium transition-all duration-200 relative"
-      : "text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-base font-medium transition-all duration-200 relative";
-
-    const activeClasses = isMobile
-      ? "text-[#7a8450] font-semibold [&>span]:underline [&>span]:underline-offset-4 [&>span]:decoration-[#7a8450] [&>span]:decoration-2"
-      : "text-[#7a8450] font-semibold [&>span]:underline [&>span]:underline-offset-4 [&>span]:decoration-[#7a8450] [&>span]:decoration-2";
-
-    return isActiveLink(href) ? `${baseClasses} ${activeClasses}` : baseClasses;
+  const getNavLinkClasses = (href: string, isMobile = false) => {
+    const active = isActiveLink(href);
+    const weight = active ? "font-semibold" : "font-medium";
+    return isMobile
+      ? `block px-3 py-2 text-base ${weight} text-[#f6e6d1]/85 transition-all duration-200 hover:text-[#f6e6d1] relative rounded-md`
+      : `px-3 py-2 text-base ${weight} text-[#f6e6d1]/85 transition-all duration-200 hover:text-[#f6e6d1] relative rounded-md`;
   };
 
   const handleLogout = () => {
@@ -44,12 +39,11 @@ export default function NavigationSuspense() {
     router.replace("/");
   };
 
-  // Afficher un indicateur de chargement pendant l'initialisation de l'auth
   if (isLoading) {
     return (
       <div className="flex items-center space-x-4">
-        <div className="w-20 h-8 bg-gray-200 animate-pulse rounded"></div>
-        <div className="w-24 h-8 bg-gray-200 animate-pulse rounded"></div>
+        <div className="h-8 w-20 animate-pulse rounded bg-[#f6e6d1]/15"></div>
+        <div className="h-8 w-24 animate-pulse rounded bg-[#f6e6d1]/15"></div>
       </div>
     );
   }
@@ -58,27 +52,24 @@ export default function NavigationSuspense() {
     // Menu connecté
     return (
       <>
-        {/* Menu Desktop */}
-        <div className="hidden md:flex items-center space-x-2">
+        <div className="hidden items-center space-x-2 md:flex">
           <Link
             href="/dashboard"
-            className={`${getLinkClasses(
-              "/dashboard"
-            )} flex items-center gap-2`}
+            className={`${getNavLinkClasses("/dashboard")} flex items-center gap-2`}
           >
             <IoMdStats size={18} className="flex-shrink-0" />
             <span>Dashboard</span>
           </Link>
           <Link
             href="/trips"
-            className={`${getLinkClasses("/trips")} flex items-center gap-2`}
+            className={`${getNavLinkClasses("/trips")} flex items-center gap-2`}
           >
             <IoMdAirplane size={18} className="flex-shrink-0" />
             <span>Mes voyages</span>
           </Link>
           <Link
             href="/profile"
-            className={`${getLinkClasses("/profile")} flex items-center gap-2`}
+            className={`${getNavLinkClasses("/profile")} flex items-center gap-2`}
           >
             <IoMdPerson size={18} className="flex-shrink-0" />
             <span>Mon profil</span>
@@ -86,7 +77,7 @@ export default function NavigationSuspense() {
           {user.admin && (
             <Link
               href="/admin"
-              className={`${getLinkClasses("/admin")} flex items-center gap-2`}
+              className={`${getNavLinkClasses("/admin")} flex items-center gap-2`}
             >
               <IoMdSettings size={18} className="flex-shrink-0" />
               <span>Admin</span>
@@ -95,18 +86,16 @@ export default function NavigationSuspense() {
           <button
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-base font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-base font-medium text-white transition-colors duration-200 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {/* <IoMdLogOut size={18} className="flex-shrink-0" /> */}
             <span>{isLoggingOut ? "Déconnexion..." : "Déconnexion"}</span>
           </button>
         </div>
 
-        {/* Bouton Menu Mobile */}
         <div className="md:hidden">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="text-gray-700 hover:text-gray-900 p-2 rounded-md"
+            className="rounded-md p-2 text-[#f6e6d1] hover:bg-[#f6e6d1]/10 hover:text-[#f6e6d1]"
             aria-expanded={isMenuOpen}
             aria-label="Ouvrir le menu"
           >
@@ -135,16 +124,14 @@ export default function NavigationSuspense() {
           </button>
         </div>
 
-        {/* Menu Mobile */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-[#f6e6d1] shadow-lg z-50">
-            <div className="px-6 py-6 space-y-4">
+          <div
+            className={`absolute left-0 right-0 top-full z-[60] ${mobileMenuPanel}`}
+          >
+            <div className="space-y-4 px-6 py-6">
               <Link
                 href="/dashboard"
-                className={`${getLinkClasses(
-                  "/dashboard",
-                  true
-                )} flex items-center gap-3`}
+                className={`${getNavLinkClasses("/dashboard", true)} flex items-center gap-3`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <IoMdStats size={20} className="flex-shrink-0" />
@@ -152,10 +139,7 @@ export default function NavigationSuspense() {
               </Link>
               <Link
                 href="/trips"
-                className={`${getLinkClasses(
-                  "/trips",
-                  true
-                )} flex items-center gap-3`}
+                className={`${getNavLinkClasses("/trips", true)} flex items-center gap-3`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <IoMdAirplane size={20} className="flex-shrink-0" />
@@ -163,10 +147,7 @@ export default function NavigationSuspense() {
               </Link>
               <Link
                 href="/profile"
-                className={`${getLinkClasses(
-                  "/profile",
-                  true
-                )} flex items-center gap-3`}
+                className={`${getNavLinkClasses("/profile", true)} flex items-center gap-3`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <IoMdPerson size={20} className="flex-shrink-0" />
@@ -175,10 +156,7 @@ export default function NavigationSuspense() {
               {user.admin && (
                 <Link
                   href="/admin"
-                  className={`${getLinkClasses(
-                    "/admin",
-                    true
-                  )} flex items-center gap-3`}
+                  className={`${getNavLinkClasses("/admin", true)} flex items-center gap-3`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <IoMdSettings size={20} className="flex-shrink-0" />
@@ -191,7 +169,7 @@ export default function NavigationSuspense() {
                   setIsMenuOpen(false);
                 }}
                 disabled={isLoggingOut}
-                className="w-full text-left bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-md text-base font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                className="flex w-full items-center gap-3 rounded-md bg-red-600 px-4 py-3 text-left text-base font-medium text-white transition-colors duration-200 hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <IoMdLogOut size={20} className="flex-shrink-0" />
                 <span>{isLoggingOut ? "Déconnexion..." : "Déconnexion"}</span>
@@ -203,30 +181,27 @@ export default function NavigationSuspense() {
     );
   }
 
-  // Menu non connecté
   return (
     <>
-      {/* Menu Desktop */}
-      <div className="hidden md:flex items-center space-x-4">
+      <div className="hidden items-center space-x-4 md:flex">
         <Link
           href="/user/login"
-          className="text-gray-700 hover:text-gray-900 px-4 py-3 rounded-md text-base font-medium transition-colors duration-200"
+          className="rounded-md px-4 py-3 text-base font-medium text-[#f6e6d1]/90 transition-colors duration-200 hover:text-[#f6e6d1]"
         >
           Se connecter
         </Link>
         <Link
           href="/user/signup"
-          className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-md text-base font-medium transition-colors duration-200"
+          className="rounded-md bg-[#7a8450] px-6 py-3 text-base font-medium text-white transition-colors duration-200 hover:bg-[#6a7450]"
         >
           S&apos;inscrire
         </Link>
       </div>
 
-      {/* Bouton Menu Mobile */}
       <div className="md:hidden">
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="text-gray-700 hover:text-gray-900 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500"
+          className="rounded-md p-2 text-[#f6e6d1] hover:bg-[#f6e6d1]/10 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#f6e6d1]/30"
           aria-expanded={isMenuOpen}
           aria-label="Ouvrir le menu"
         >
@@ -255,20 +230,21 @@ export default function NavigationSuspense() {
         </button>
       </div>
 
-      {/* Menu Mobile */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-[#f6e6d1] shadow-lg z-50">
-          <div className="px-4 py-4 space-y-3">
+        <div
+          className={`absolute left-0 right-0 top-full z-[60] ${mobileMenuPanel}`}
+        >
+          <div className="space-y-3 px-4 py-4">
             <Link
               href="/user/login"
-              className="block text-gray-700 hover:text-gray-900 px-4 py-3 rounded-md text-base font-medium transition-colors duration-200"
+              className="block w-full rounded-md px-4 py-3 text-left text-base font-medium text-[#f6e6d1] transition-colors duration-200 hover:bg-[#f6e6d1]/18 hover:text-white"
               onClick={() => setIsMenuOpen(false)}
             >
               Se connecter
             </Link>
             <Link
               href="/user/signup"
-              className="block bg-amber-600 hover:bg-amber-700 text-white px-4 py-3 rounded-md text-base font-medium transition-colors duration-200"
+              className="block w-full rounded-md bg-[#7a8450] px-4 py-3 text-left text-base font-medium text-white transition-colors duration-200 hover:bg-[#8f9a62]"
               onClick={() => setIsMenuOpen(false)}
             >
               S&apos;inscrire

@@ -24,7 +24,7 @@ export default function SignupClient() {
   const [state, formAction] = useActionState(
     async (
       prevState: { success: boolean; error: string | null },
-      formData: FormData
+      formData: FormData,
     ) => {
       const username = formData.get("username") as string;
       const email = formData.get("email") as string;
@@ -48,7 +48,7 @@ export default function SignupClient() {
         };
       }
     },
-    { success: false, error: null }
+    { success: false, error: null },
   );
 
   // Redirection après inscription réussie
@@ -59,7 +59,7 @@ export default function SignupClient() {
   }, [state.success, user, router, redirectTo]);
 
   return (
-    <div className="min-h-screen bg-[#f6e6d1] flex flex-col justify-center sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col justify-center bg-[#f6e6d1] px-4 pt-[calc(6rem+env(safe-area-inset-top,0px)+0.25rem)] sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md font-bagel">
         <h2 className="text-center text-4xl text-gray-900 font-bagel">
           Inscription
@@ -68,9 +68,9 @@ export default function SignupClient() {
           ou{" "}
           <Link
             href={`/user/login${
-              redirectTo !== "/dashboard"
-                ? `?redirect=${encodeURIComponent(redirectTo)}`
-                : ""
+              redirectTo === "/dashboard"
+                ? ""
+                : `?redirect=${encodeURIComponent(redirectTo)}`
             }`}
             className="font-medium text-orange-900 hover:text-orange-950"
           >

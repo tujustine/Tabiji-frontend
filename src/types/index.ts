@@ -34,6 +34,7 @@ export interface Memory {
   id: string;
   type: "text" | "image" | "video";
   content: string;
+  media?: { url: string }[];
   position: { x: number; y: number };
   size: { width: number; height: number };
   zIndex: number;
@@ -121,7 +122,7 @@ export interface AdminTripStats {
   tripsWithPlaces: number;
   tripsWithoutContent: number;
   monthlyStats: Record<string, number>;
- }
+}
 
 export interface AdminUser {
   id: string;

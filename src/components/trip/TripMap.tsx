@@ -177,7 +177,7 @@ export default function TripMap({
     <div className="relative h-[400px] w-full rounded-lg overflow-hidden shadow-sm border border-gray-200">
       <style dangerouslySetInnerHTML={{ __html: customMapStyles }} />
       {/* Contrôles de la carte */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+      <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
         {/* Sélecteur de catégorie */}
         {isAddMode && (
           <div className="bg-white rounded-lg shadow-md p-3">

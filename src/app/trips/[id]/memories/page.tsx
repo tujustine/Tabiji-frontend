@@ -97,14 +97,25 @@ export default function MemoriesPage({ params }: MemoriesPageProps) {
             position: { x: number; y: number };
             size: { width: number; height: number };
             zIndex?: number;
-          }) => ({
-            id: m.id,
-            type: m.type,
-            content: m.content,
-            position: m.position as { x: number; y: number },
-            size: m.size as { width: number; height: number },
-            zIndex: m.zIndex || 0,
-          })
+            media?: { url: string }[];
+          }) => {
+            const raw = String(m.type).toLowerCase();
+            const type =
+              raw === "text" || raw === "image" || raw === "video"
+                ? raw
+                : "text";
+            const urlFromMedia = m.media?.[0]?.url?.trim();
+            const contentTrim = m.content?.trim();
+            return {
+              id: m.id,
+              type,
+              content: contentTrim || urlFromMedia || "",
+              media: m.media,
+              position: m.position as { x: number; y: number },
+              size: m.size as { width: number; height: number },
+              zIndex: m.zIndex ?? 0,
+            };
+          }
         );
         setMemories(formattedMemories);
       } catch (error) {

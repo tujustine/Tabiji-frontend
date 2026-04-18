@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { Bagel_Fat_One, Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import { Toaster } from "react-hot-toast";
 import Header from "@/components/layout/Header";
+import MainShell from "@/components/layout/MainShell";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { FavoritesProvider } from "@/contexts/FavoritesContext";
 
-const bagelFatOne = Bagel_Fat_One({
-  variable: "--font-bagel-fat-one",
-  subsets: ["latin"],
-  weight: "400",
-});
-
-const inter = Inter({
-  variable: "--font-inter",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
 });
 
@@ -36,14 +31,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${bagelFatOne.variable} ${inter.variable} antialiased`}>
+      <body className={`${manrope.variable} antialiased font-sans`}>
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap"
+          rel="stylesheet"
+        />
         <AuthProvider>
           <FavoritesProvider>
             <Header />
-            {children}
+            <MainShell>{children}</MainShell>
             <Footer />
             <Toaster
               position="top-right"
+              containerStyle={{ zIndex: 2200 }}
               toastOptions={{
                 duration: 4000,
                 style: {

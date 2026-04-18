@@ -162,7 +162,7 @@ export default function DestinationsGrid() {
                     width={800}
                     height={600}
                     priority={destinations.indexOf(destination) < 4}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-48 object-cover"
                   />
 
                   {/* Overlay sombre */}

@@ -10,10 +10,17 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Draggable, { DraggableData, DraggableEvent } from "react-draggable";
-import { IoMdSave, IoMdArrowBack, IoMdClose } from "react-icons/io";
+import { IoMdSave, IoMdArrowBack, IoMdClose, IoMdCreate } from "react-icons/io";
 import { FaImage, FaVideo, FaFont } from "react-icons/fa";
 import type { Memory } from "@/types";
 import { useSocket } from "@/hooks/useSocket";
+
+/** URL affichable : `content` ou premier fichier lié (`media[]`) renvoyé par l’API */
+function resolveMemoryContentUrl(memory: Memory): string {
+  const fromContent = memory.content?.trim();
+  if (fromContent) return fromContent;
+  return memory.media?.[0]?.url?.trim() ?? "";
+}
 import { useAuth } from "@/contexts/AuthContext";
 import Modal from "@/components/modal/Modal";
 
@@ -355,8 +362,8 @@ export default function MemoriesCanvas({
           return true;
         }
         
-        // Pour les images et vidéos, on supprime seulement si le contenu est vide
-        const shouldKeep = memory.content && memory.content.trim() !== "";
+        // Images / vidéos : garder si URL dans content ou dans media[]
+        const shouldKeep = resolveMemoryContentUrl(memory) !== "";
         return shouldKeep;
       });
 
@@ -976,7 +983,7 @@ export default function MemoriesCanvas({
   return (
     <div className="min-h-screen bg-[#f6e6d1]">
       {/* Barre d'outils */}
-      <div className="bg-white shadow-md p-4 mx-4 mt-2 mb-0 sticky top-0 z-[1000] rounded-t-lg">
+      <div className="bg-white shadow-md p-4 mx-4 mt-2 mb-0 sticky top-0 z-40 rounded-t-lg">
         <div className="flex sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
@@ -1158,16 +1165,16 @@ export default function MemoriesCanvas({
                 nodeRef={dragRef}
                 bounds={canEdit ? bounds : undefined}
                 disabled={!canEdit}
+                cancel="button"
+                handle={memory.type === "text" ? ".memory-text-drag" : undefined}
               >
                 <div
-                  className="absolute cursor-move rounded-xl border-0 bg-transparent p-0"
+                  className="absolute min-h-0 min-w-0 max-w-full cursor-move rounded-xl border-0 bg-transparent p-0"
                   style={{
                     width: `${memory.size.width}%`,
                     height: `${memory.size.height}%`,
                     zIndex: memory.zIndex,
                     boxSizing: "border-box",
-                    minWidth: 0,
-                    minHeight: 0,
                   }}
                   onClick={(e) => {
                     // Ne sélectionner que si on n'a pas cliqué sur un bouton
@@ -1183,14 +1190,7 @@ export default function MemoriesCanvas({
                     }
                   }}
                   onMouseDown={(e) => {
-                    // Permettre le drag
-                    if (canEdit && !(e.target as HTMLElement).closest('button')) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onTouchStart={(e) => {
-                    // Permettre le drag sur mobile
-                    if (canEdit && !(e.target as HTMLElement).closest('button')) {
+                    if (canEdit && !(e.target as HTMLElement).closest("button")) {
                       e.preventDefault();
                     }
                   }}
@@ -1199,21 +1199,20 @@ export default function MemoriesCanvas({
                   ref={dragRef as React.RefObject<HTMLDivElement>}
                 >
                   <div
-                    className={`relative rounded-lg overflow-hidden group shadow-md ${
-                      memory.type === "image" || memory.type === "video"
-                        ? ""
-                        : "bg-white"
+                    className={`relative h-full w-full overflow-hidden rounded-lg group shadow-md ${
+                      memory.type === "text"
+                        ? `grid min-h-0 bg-white ${
+                            canEdit
+                              ? "grid-rows-[auto_minmax(0,1fr)]"
+                              : "grid-rows-[minmax(0,1fr)]"
+                          }`
+                        : "min-h-0 min-w-0"
                     }`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      minWidth: 0,
-                      minHeight: 0,
-                    }}
+                    style={{ width: "100%", height: "100%" }}
                   >
                     {/* Barre d'outils - uniquement pour texte */}
                     {memory.type === "text" && canEdit && (
-                      <div className="drag-handle bg-gray-100 px-2 py-1 flex items-center justify-start gap-2 border-b border-gray-200 cursor-move">
+                      <div className="memory-text-drag drag-handle flex shrink-0 cursor-move flex-nowrap items-center justify-start gap-1 overflow-x-auto border-b border-gray-200 bg-gray-100 px-1 py-1 sm:gap-1.5 sm:px-1.5 [scrollbar-width:thin]">
                         {/* Bouton suppression (rouge) */}
                         <button
                           type="button"
@@ -1221,10 +1220,26 @@ export default function MemoriesCanvas({
                             e.stopPropagation();
                             deleteMemory(memory.id);
                           }}
-                          className="w-5 h-5 bg-red-500 hover:bg-red-600 text-gray-800 rounded-full flex items-center justify-center transition-colors"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-red-500 text-gray-800 transition-colors hover:bg-red-600"
                           title="Supprimer"
                         >
                           <IoMdClose size={12} />
+                        </button>
+
+                        {/* Éditer le texte — mobile uniquement (double-clic au bureau) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTextEditModal(memory.id);
+                          }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-blue-500 text-gray-800 transition-colors hover:bg-blue-600 md:hidden"
+                          title="Éditer le texte"
+                          aria-label="Éditer le texte"
+                        >
+                          <IoMdCreate size={12} />
                         </button>
 
                         {/* Bouton redimensionnement (vert) */}
@@ -1234,32 +1249,39 @@ export default function MemoriesCanvas({
                             e.stopPropagation();
                             openResizeModal(memory.id);
                           }}
-                          className="w-5 h-5 bg-green-500 hover:bg-green-600 text-gray-800 rounded-full flex items-center justify-center transition-colors"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-green-500 text-gray-800 transition-colors hover:bg-green-600"
                           title="Redimensionner"
                         >
-                          <span className="text-sm font-bold">⤡</span>
+                          <span className="text-xs font-bold leading-none">⤡</span>
                         </button>
                       </div>
                     )}
 
-                    {/* Contenu */}
-                    <div
-                      className={`overflow-hidden ${
-                        memory.type === "image" || memory.type === "video"
-                          ? "h-full"
-                          : "p-2 h-[calc(100%-28px)]"
-                      }`}
-                    >
-                      {memory.type === "text" && (
+                    {memory.type === "text" && (
+                      <div className="flex min-h-0 flex-col overflow-hidden p-2">
                         <textarea
                           readOnly
-                          className={`w-full h-full text-left text-sm whitespace-pre-wrap break-words resize-none border-0 bg-transparent outline-none ${
-                            canEdit ? "!cursor-move" : "cursor-default"
+                          className={`box-border block min-h-0 w-full flex-1 basis-0 text-left text-sm whitespace-pre-wrap break-words resize-none border-0 bg-transparent outline-none ${
+                            canEdit ? "cursor-text" : "cursor-default"
                           }`}
                           value={
                             memory.content ||
-                            (canEdit ? "Double-cliquez pour éditer" : "Texte")
+                            (canEdit
+                              ? "Double-clic ou icône crayon pour éditer"
+                              : "Texte")
                           }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              !canEdit ||
+                              typeof window === "undefined" ||
+                              !window.matchMedia("(pointer: coarse)").matches
+                            ) {
+                              return;
+                            }
+                            openTextEditModal(memory.id);
+                          }}
                           onDoubleClick={(e) => {
                             e.stopPropagation();
                             if (canEdit) {
@@ -1267,7 +1289,11 @@ export default function MemoriesCanvas({
                             }
                           }}
                           tabIndex={canEdit ? 0 : undefined}
-                          aria-label={canEdit ? "Double-cliquez pour éditer le texte" : undefined}
+                          aria-label={
+                            canEdit
+                              ? "Texte du souvenir. Double-cliquez pour éditer sur ordinateur, ou utilisez le bouton crayon sur mobile."
+                              : undefined
+                          }
                           onKeyDown={(e) => {
                             if (canEdit && (e.key === "Enter" || e.key === " ")) {
                               e.preventDefault();
@@ -1276,13 +1302,14 @@ export default function MemoriesCanvas({
                             }
                           }}
                         />
-                      )}
+                      </div>
+                    )}
 
                       {memory.type === "image" &&
-                        (memory.content ? (
+                        (resolveMemoryContentUrl(memory) ? (
                           <div className="w-full h-full relative rounded-xl overflow-hidden">
                             <Image
-                              src={memory.content}
+                              src={resolveMemoryContentUrl(memory)}
                               alt="Souvenir"
                               fill
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -1290,7 +1317,7 @@ export default function MemoriesCanvas({
                             />
                             {/* Superposition avec boutons */}
                             {canEdit && (
-                              <div className="absolute top-2 left-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <div className="pointer-events-auto absolute left-1 top-1 z-10 flex flex-nowrap gap-1 opacity-100 transition-opacity duration-200 md:left-2 md:top-2 md:gap-2 md:opacity-0 md:group-hover:opacity-100">
                                 {/* Bouton suppression (rouge) */}
                                 <button
                                   type="button"
@@ -1298,7 +1325,8 @@ export default function MemoriesCanvas({
                                     e.stopPropagation();
                                     deleteMemory(memory.id);
                                   }}
-                                  className="w-5 h-5 bg-red-500 hover:bg-red-600 text-gray-800 rounded-full flex items-center justify-center transition-colors"
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-red-500 text-gray-800 transition-colors hover:bg-red-600"
                                   title="Supprimer"
                                 >
                                   <IoMdClose size={12} />
@@ -1311,10 +1339,13 @@ export default function MemoriesCanvas({
                                     e.stopPropagation();
                                     openResizeModal(memory.id);
                                   }}
-                                  className="w-5 h-5 bg-green-500 hover:bg-green-600 text-gray-800 rounded-full flex items-center justify-center transition-colors"
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-green-500 text-gray-800 transition-colors hover:bg-green-600"
                                   title="Redimensionner"
                                 >
-                                  <span className="text-sm font-bold">⤡</span>
+                                  <span className="text-xs font-bold leading-none">
+                                    ⤡
+                                  </span>
                                 </button>
                               </div>
                             )}
@@ -1326,18 +1357,21 @@ export default function MemoriesCanvas({
                         ))}
 
                       {memory.type === "video" &&
-                        (memory.content ? (
-                          <div className="w-full h-full relative rounded-xl overflow-hidden">
-                            <iframe
-                              src={memory.content}
-                              className="w-full h-full"
+                        (resolveMemoryContentUrl(memory) ? (
+                          <div className="w-full h-full relative rounded-xl overflow-hidden bg-black">
+                            <video
+                              src={resolveMemoryContentUrl(memory)}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="h-full w-full object-contain"
                               title="Vidéo souvenir"
                             />
                             {/* Barre draggable large avec boutons */}
                             {canEdit && (
-                              <div className="drag-handle absolute top-0 left-0 right-0 flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 cursor-move bg-black/30 rounded-t-xl px-3 py-2">
+                              <div className="drag-handle absolute left-0 right-0 top-0 z-10 flex cursor-move items-center rounded-t-xl bg-black/30 px-1.5 py-1 opacity-100 transition-opacity duration-200 sm:px-2 sm:py-1.5 md:opacity-0 md:group-hover:opacity-100">
                                 {/* Boutons à gauche */}
-                                <div className="flex gap-2">
+                                <div className="flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto sm:gap-2 [scrollbar-width:thin]">
                                   {/* Bouton suppression (rouge) */}
                                   <button
                                     type="button"
@@ -1345,8 +1379,8 @@ export default function MemoriesCanvas({
                                       e.stopPropagation();
                                       deleteMemory(memory.id);
                                     }}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    className="w-5 h-5 bg-red-500 hover:bg-red-600 text-gray-800 rounded-full flex items-center justify-center transition-colors"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-red-500 text-gray-800 transition-colors hover:bg-red-600"
                                     title="Supprimer"
                                   >
                                     <IoMdClose size={12} />
@@ -1359,11 +1393,13 @@ export default function MemoriesCanvas({
                                       e.stopPropagation();
                                       openResizeModal(memory.id);
                                     }}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    className="w-5 h-5 bg-green-500 hover:bg-green-600 text-gray-800 rounded-full flex items-center justify-center transition-colors"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-green-500 text-gray-800 transition-colors hover:bg-green-600"
                                     title="Redimensionner"
                                   >
-                                    <span className="text-sm font-bold">⤡</span>
+                                    <span className="text-xs font-bold leading-none">
+                                      ⤡
+                                    </span>
                                   </button>
                                 </div>
 
@@ -1377,7 +1413,6 @@ export default function MemoriesCanvas({
                             <span className="text-sm">Chargement...</span>
                           </div>
                         ))}
-                    </div>
                   </div>
                 </div>
               </Draggable>

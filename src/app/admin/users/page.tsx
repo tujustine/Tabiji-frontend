@@ -35,13 +35,13 @@ export default function AdminUsersPage() {
   const filteredUsers = allUsers.filter(
     (user) =>
       user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const handleDelete = async (userId: string) => {
     if (
       !confirm(
-        "Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
+        "Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.",
       )
     ) {
       return;
@@ -51,7 +51,7 @@ export default function AdminUsersPage() {
       await deleteUser(userId);
       // Mettre à jour l'état local en supprimant l'utilisateur supprimé
       setAllUsers((prevUsers) =>
-        prevUsers.filter((user) => user.id !== userId)
+        prevUsers.filter((user) => user.id !== userId),
       );
     } catch (err) {
       console.error("Erreur lors de la suppression:", err);
@@ -65,8 +65,8 @@ export default function AdminUsersPage() {
       // Mettre à jour l'état local en modifiant le rôle de l'utilisateur
       setAllUsers((prevUsers) =>
         prevUsers.map((user) =>
-          user.id === userId ? { ...user, admin: !user.admin } : user
-        )
+          user.id === userId ? { ...user, admin: !user.admin } : user,
+        ),
       );
     } catch (err) {
       console.error("Erreur lors de la modification du rôle:", err);
@@ -235,18 +235,15 @@ export default function AdminUsersPage() {
               </div>
               <p className="text-sm text-gray-600 mb-2">{user.email}</p>
               <p className="text-sm text-gray-500 mb-3">
-                Créé le{" "}
-                {new Date(user.createdAt).toLocaleDateString("fr-FR")}
+                Créé le {new Date(user.createdAt).toLocaleDateString("fr-FR")}
               </p>
-              <div className="flex justify-between text-sm text-gray-500">
+              <div className="flex flex-col justify-between text-sm text-gray-500">
                 <span>Voyages: {user._count?.tripsOwned || 0}</span>
-                <span>
-                  Collaborations: {user._count?.collaborations || 0}
-                </span>
+                <span>Collaborations: {user._count?.collaborations || 0}</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 ml-4">
+          <div className="flex flex-col items-center gap-3 ml-4">
             <div className="relative group">
               <button
                 onClick={() => handleToggleAdmin(user.id)}
@@ -322,7 +319,8 @@ export default function AdminUsersPage() {
       <div className="mb-4 text-sm text-gray-600">
         {filteredUsers.length} utilisateur
         {filteredUsers.length > 1 ? "s" : ""}
-        {searchQuery && ` trouvé
+        {searchQuery &&
+          ` trouvé
         ${filteredUsers.length > 1 ? "s" : ""} pour "${searchQuery}"`}
       </div>
 
@@ -356,9 +354,7 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Cartes Mobile */}
-      <div className="md:hidden space-y-4">
-        {renderMobileCards()}
-      </div>
+      <div className="md:hidden space-y-4">{renderMobileCards()}</div>
     </div>
   );
 }
