@@ -322,6 +322,11 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
 
   // Sauvegarder les modifications
   const handleSave = async () => {
+    if (!trip.title.trim()) {
+      toast.error("Le titre du voyage ne peut pas être vide");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const response = await fetch(
@@ -462,7 +467,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
     setIsMapAddMode(enabled);
   };
 
-  if (isLoading || !trip?.title) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
         <div className="text-xl text-gray-700">Chargement...</div>

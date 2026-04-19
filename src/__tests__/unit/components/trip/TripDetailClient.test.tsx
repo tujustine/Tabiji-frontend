@@ -2,10 +2,11 @@
  * Tests unitaires pour TripDetailClient
  */
 
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import TripDetailClient from "@/components/trip/TripDetailClient";
 import { render } from "@/__tests__/setup/test-utils";
 import type { Trip } from "@/types";
+import toast from "react-hot-toast";
 
 const mockPush = jest.fn();
 const mockRouter = jest.fn(() => ({
@@ -153,6 +154,31 @@ describe("TripDetailClient", () => {
       });
     });
 
+    it("ne devrait pas rester bloqué sur chargement si le titre est vide", async () => {
+      setupAuthenticatedUser();
+
+      (globalThis.fetch as jest.Mock).mockImplementation((url: string) => {
+        if (url.includes("/user/me")) {
+          return Promise.resolve(mockUserResponse());
+        }
+        if (url.includes("/favorites") || url.includes("/user/favorites")) {
+          return Promise.resolve(createMockResponse([]));
+        }
+        if (url.includes("/trip/trip-123")) {
+          return Promise.resolve(mockTripResponse({ title: "" }));
+        }
+        return Promise.resolve({ ok: false });
+      });
+
+      render(<TripDetailClient tripId="trip-123" />);
+
+      await waitFor(() => {
+        expect(
+          screen.getByPlaceholderText("Nom du voyage")
+        ).toBeInTheDocument();
+      });
+    });
+
     it("devrait gérer les erreurs de chargement", async () => {
       setupAuthenticatedUser();
 
@@ -269,6 +295,22 @@ describe("TripDetailClient", () => {
       await waitFor(() => {
         expect(screen.getByText(/Supprimer/i)).toBeInTheDocument();
       });
+    });
+
+    it("devrait refuser la sauvegarde si le titre est vide", async () => {
+      render(<TripDetailClient tripId="trip-123" />);
+
+      const titleInput = await screen.findByDisplayValue("Voyage à Paris");
+      fireEvent.change(titleInput, { target: { value: "" } });
+      fireEvent.click(screen.getByText(/Sauvegarder/i));
+
+      expect(toast.error).toHaveBeenCalledWith(
+        "Le titre du voyage ne peut pas être vide"
+      );
+      expect(globalThis.fetch).not.toHaveBeenCalledWith(
+        expect.stringContaining("/trip/trip-123"),
+        expect.objectContaining({ method: "PUT" })
+      );
     });
   });
 
