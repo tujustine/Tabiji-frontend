@@ -17,9 +17,11 @@ import PlaceAutocomplete, {
 interface PlacesListProps {
   places: Place[];
   canEdit?: boolean;
+  categories?: string[];
   onAddPlace: (place: Place) => void;
   onRemovePlace: (id: string) => void;
   onUpdatePlace?: (id: string, updates: Partial<Place>) => void;
+  onAddCategory?: (category: string) => void;
   onMapAddMode?: (enabled: boolean) => void;
   isMapAddMode?: boolean;
 }
@@ -36,9 +38,11 @@ const DEFAULT_CATEGORIES = [
 export default function PlacesList({
   places,
   canEdit = true,
+  categories = DEFAULT_CATEGORIES,
   onAddPlace,
   onRemovePlace,
   onUpdatePlace,
+  onAddCategory,
   onMapAddMode,
   isMapAddMode = false,
 }: Readonly<PlacesListProps>) {
@@ -141,17 +145,17 @@ export default function PlacesList({
   };
 
   const handleEditPlace = (place: Place) => {
-    const isDefaultCategory = DEFAULT_CATEGORIES.includes(place.category);
+    const isKnownCategory = categories.includes(place.category);
     setFormData({
       name: place.name,
       address: place.address,
-      category: isDefaultCategory ? place.category : DEFAULT_CATEGORIES[0],
+      category: isKnownCategory ? place.category : DEFAULT_CATEGORIES[0],
       description: place.description,
       lat: String(place.coordinates.lat),
       lng: String(place.coordinates.lng),
     });
-    setShowCustomCategory(!isDefaultCategory);
-    setCustomCategory(isDefaultCategory ? "" : place.category);
+    setShowCustomCategory(!isKnownCategory);
+    setCustomCategory(isKnownCategory ? "" : place.category);
     setEditingPlaceId(place.id);
     setShowForm(true);
   };
@@ -281,7 +285,7 @@ export default function PlacesList({
                   }
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7a8450]"
                 >
-                  {DEFAULT_CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
                     </option>
@@ -310,9 +314,12 @@ export default function PlacesList({
                   <button
                     type="button"
                     onClick={() => {
-                      if (customCategory.trim()) {
-                        setFormData({ ...formData, category: customCategory.trim() });
+                      const category = customCategory.trim();
+                      if (category) {
+                        onAddCategory?.(category);
+                        setFormData({ ...formData, category });
                         setShowCustomCategory(false);
+                        setCustomCategory("");
                       }
                     }}
                     className="px-3 py-1 bg-[#7a8450] hover:bg-[#6a7445] text-white rounded text-sm transition-colors"

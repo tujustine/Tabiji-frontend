@@ -711,6 +711,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                 <PlacesList
                   places={trip.places}
                   canEdit={userPermissions.canEdit}
+                  categories={getAllCategories(trip.places || [], customCategories)}
                   onAddPlace={(place) =>
                     dispatch({ type: "ADD_PLACE", payload: place })
                   }
@@ -719,6 +720,9 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                   }
                   onUpdatePlace={(id, updates) =>
                     dispatch({ type: "UPDATE_PLACE", payload: { id, updates } })
+                  }
+                  onAddCategory={(category) =>
+                    dispatch({ type: "ADD_CUSTOM_CATEGORY", payload: category })
                   }
                   onMapAddMode={handleMapAddModeChange}
                   isMapAddMode={isMapAddMode}
