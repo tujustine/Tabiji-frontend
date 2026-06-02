@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import TravelLoader from "@/components/ui/TravelLoader";
 import Link from "next/link";
 import { IoMdStats, IoMdPeople, IoMdAirplane } from "react-icons/io";
 
@@ -28,11 +29,7 @@ export default function AdminLayout({
 
   // Afficher le chargement tant que l'initialisation n'est pas terminée
   if (!isInitialized || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Chargement...</div>
-      </div>
-    );
+    return <TravelLoader fullScreen label="Chargement..." />;
   }
 
   if (!user?.admin) {

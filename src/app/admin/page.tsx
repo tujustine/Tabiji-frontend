@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAdmin } from "@/hooks/useAdmin";
 import { AdminStats, AdminUserStats, AdminTripStats } from "@/types";
+import TravelLoader from "@/components/ui/TravelLoader";
 
 export default function AdminDashboard() {
   const { getStats, getUserStats, getTripStats, loading, error } = useAdmin();
@@ -29,11 +30,7 @@ export default function AdminDashboard() {
   }, [getStats, getUserStats, getTripStats]);
 
   if (loading && !stats && !userStats && !tripStats) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Chargement des statistiques...</div>
-      </div>
-    );
+    return <TravelLoader label="Chargement des statistiques..." />;
   }
 
   if (error) {
@@ -148,7 +145,7 @@ export default function AdminDashboard() {
                             width: `${
                               (count /
                                 Math.max(
-                                  ...Object.values(userStats.monthlyStats)
+                                  ...Object.values(userStats.monthlyStats),
                                 )) *
                               100
                             }%`,
@@ -217,7 +214,7 @@ export default function AdminDashboard() {
                               width: `${
                                 (count /
                                   Math.max(
-                                    ...Object.values(tripStats.monthlyStats)
+                                    ...Object.values(tripStats.monthlyStats),
                                   )) *
                                 100
                               }%`,
@@ -232,7 +229,6 @@ export default function AdminDashboard() {
                   ))}
               </div>
             </div>
-
           </div>
         </div>
       )}

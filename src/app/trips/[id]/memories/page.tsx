@@ -7,17 +7,14 @@
 
 import { useEffect, useState, use } from "react";
 import dynamic from "next/dynamic";
+import TravelLoader from "@/components/ui/TravelLoader";
 
 // Composant client-only pour éviter les problèmes SSR
 const MemoriesCanvas = dynamic(
   () => import("@/components/memories/MemoriesCanvas"),
   {
     ssr: false,
-    loading: () => (
-      <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
-        <div className="text-xl text-gray-700">Chargement...</div>
-      </div>
-    ),
+    loading: () => <TravelLoader fullScreen label="Chargement des souvenirs..." />,
   }
 );
 import { useAuth } from "@/contexts/AuthContext";
@@ -191,11 +188,7 @@ export default function MemoriesPage({ params }: MemoriesPageProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
-        <div className="text-xl text-gray-700">Chargement...</div>
-      </div>
-    );
+    return <TravelLoader fullScreen label="Chargement des souvenirs..." />;
   }
 
   return (

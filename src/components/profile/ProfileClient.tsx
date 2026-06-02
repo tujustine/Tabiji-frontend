@@ -339,9 +339,17 @@ export default function ProfileClient() {
                         className="object-cover w-full h-full"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-400 text-sm">
-                          Chargement...
+                      <div
+                        className="w-full h-full bg-gray-200 flex items-center justify-center"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div
+                          className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-[#7a8450] animate-spin"
+                          aria-hidden="true"
+                        />
+                        <span className="sr-only">
+                          Chargement de la photo...
                         </span>
                       </div>
                     )}

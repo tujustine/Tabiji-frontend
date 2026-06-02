@@ -24,6 +24,7 @@ import {
   getAllCategories,
 } from "@/contexts/TripContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import TravelLoader from "@/components/ui/TravelLoader";
 import type { Place, Memory, Trip } from "@/types";
 
 // Composant pour l'aperçu miniature du tableau de souvenirs
@@ -120,9 +121,11 @@ import PlacesList from "@/components/places/PlacesList";
 import CategoryAccordion from "@/components/accordion/CategoryAccordion";
 import DayScheduleAccordion from "@/components/accordion/DayScheduleAccordion";
 import ShareModal from "@/components/trip/ShareModal";
+import { MapSkeleton } from "@/components/ui/Skeletons";
 // Import dynamique pour TripMap (éviter les erreurs SSR avec Leaflet)
 const TripMap = dynamic(() => import("@/components/trip/TripMap"), {
   ssr: false,
+  loading: () => <MapSkeleton />,
 });
 
 interface TripDetailClientProps {
@@ -176,7 +179,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
 
     const verifyToken = async (
       apiUrl: string,
-      authToken: string
+      authToken: string,
     ): Promise<void> => {
       try {
         const verifyResponse = await fetch(`${apiUrl}/user/me`, {
@@ -192,7 +195,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
 
     const fetchTripWithAuth = async (
       apiUrl: string,
-      authToken: string | null
+      authToken: string | null,
     ): Promise<Response> => {
       if (authToken) {
         const response = await fetch(`${apiUrl}/trip/${tripId}`, {
@@ -207,7 +210,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
 
     const handleFetchError = async (
       response: Response,
-      authToken: string | null
+      authToken: string | null,
     ): Promise<never> => {
       await response.text();
       if (response.status === 401 || response.status === 403) {
@@ -217,7 +220,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
     };
 
     const formatTripData = (
-      data: Partial<Trip> & Record<string, unknown>
+      data: Partial<Trip> & Record<string, unknown>,
     ): Trip => {
       const formatDate = (date: unknown): string => {
         if (!date) return "";
@@ -241,7 +244,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
         image: typeof data.image === "string" ? data.image : "",
         participants: Array.isArray(data.participants)
           ? data.participants.filter(
-              (item): item is string => typeof item === "string"
+              (item): item is string => typeof item === "string",
             )
           : [],
         memories: Array.isArray(data.memories) ? data.memories : [],
@@ -254,7 +257,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
 
     const recordRecentTrip = async (
       apiUrl: string,
-      authToken: string
+      authToken: string,
     ): Promise<void> => {
       try {
         await fetch(`${apiUrl}/user/recent-trips/${tripId}`, {
@@ -271,7 +274,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
       setIsLoading(false);
       console.error(
         "Erreur temporaire de chargement:",
-        (error as Error).message
+        (error as Error).message,
       );
 
       if (error instanceof TypeError && error.message.includes("fetch")) {
@@ -343,7 +346,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
               }
             : { "Content-Type": "application/json" },
           body: JSON.stringify(trip),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -353,7 +356,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
         console.error("Erreur serveur:", errorData);
         throw new Error(
           errorData.message ||
-            `Erreur ${response.status}: ${response.statusText}`
+            `Erreur ${response.status}: ${response.statusText}`,
         );
       }
 
@@ -383,7 +386,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
         {
           method: "DELETE",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+        },
       );
 
       if (!response.ok) {
@@ -401,7 +404,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
   const handleLeaveTrip = async () => {
     if (
       !confirm(
-        "Êtes-vous sûr de vouloir quitter ce voyage ? Vous perdrez l'accès à ce voyage."
+        "Êtes-vous sûr de vouloir quitter ce voyage ? Vous perdrez l'accès à ce voyage.",
       )
     ) {
       return;
@@ -416,7 +419,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
         {
           method: "DELETE",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+        },
       );
 
       if (!response.ok) {
@@ -433,7 +436,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Erreur lors de la sortie du voyage"
+          : "Erreur lors de la sortie du voyage",
       );
     }
   };
@@ -456,8 +459,8 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
     setTimeout(() => {
       toast.success(
         `Lieu ajouté dans la catégorie "${selectedCategory}" à ${lat.toFixed(
-          6
-        )}, ${lng.toFixed(6)}. Vous pouvez l'éditer dans la liste des lieux.`
+          6,
+        )}, ${lng.toFixed(6)}. Vous pouvez l'éditer dans la liste des lieux.`,
       );
     }, 100);
   };
@@ -468,11 +471,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
-        <div className="text-xl text-gray-700">Chargement...</div>
-      </div>
-    );
+    return <TravelLoader fullScreen label="Chargement du voyage..." />;
   }
 
   return (
@@ -687,7 +686,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
               <h2 className="text-xl font-bold text-gray-900 font-bagel mb-4">
                 Carte
               </h2>
-              {isClient && (
+              {isClient ? (
                 <TripMap
                   places={trip.places || []}
                   onAddPlace={handleMapPlaceAdd}
@@ -696,9 +695,11 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                   onCategoryChange={setSelectedCategory}
                   categories={getAllCategories(
                     trip.places || [],
-                    customCategories
+                    customCategories,
                   )}
                 />
+              ) : (
+                <MapSkeleton />
               )}
             </section>
 
@@ -711,7 +712,10 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                 <PlacesList
                   places={trip.places}
                   canEdit={userPermissions.canEdit}
-                  categories={getAllCategories(trip.places || [], customCategories)}
+                  categories={getAllCategories(
+                    trip.places || [],
+                    customCategories,
+                  )}
                   onAddPlace={(place) =>
                     dispatch({ type: "ADD_PLACE", payload: place })
                   }
@@ -812,7 +816,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
 }
 
 export default function TripDetailClient(
-  props: Readonly<TripDetailClientProps>
+  props: Readonly<TripDetailClientProps>,
 ) {
   return (
     <TripProvider>

@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { IoSearch } from "react-icons/io5";
 import PolaroidCard from "@/components/polaroid/PolaroidCard";
 import NewTripPolaroid from "@/components/trip/NewTripPolaroid";
+import { PolaroidSkeleton } from "@/components/ui/Skeletons";
 import { formatDate } from "@/utils/dateFormatter";
 
 interface Trip {
@@ -40,6 +41,16 @@ interface TripFromAPI {
     role: "OWNER" | "EDITOR" | "VIEWER";
   }>;
 }
+
+const POLAROID_SKELETON_KEYS = [
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+];
 
 export async function getTrips(token: string | null): Promise<Trip[]> {
   if (!token) {
@@ -74,45 +85,59 @@ export default function TripsPageClient() {
   const { token, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [isTripsLoading, setIsTripsLoading] = useState(true);
 
   useEffect(() => {
     const fetchTrips = async () => {
-      if (!token || !user) return;
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trips`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        console.error("Failed to fetch trips");
+      if (!token || !user) {
+        setTrips([]);
+        setIsTripsLoading(false);
         return;
       }
 
-      const data: TripFromAPI[] = await response.json();
+      setIsTripsLoading(true);
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trips`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      // Mapper les données avec les informations de propriété
-      const mappedTrips: Trip[] = data.map((trip) => {
-        const isOwner = trip.ownerId === user._id;
-        const userRole = isOwner
-          ? "OWNER"
-          : trip.collaborators[0]?.role || "VIEWER";
-        const isShared = !isOwner || trip.collaborators.length > 0; // Voyage partagé si pas propriétaire ou s'il y a des collaborateurs
+        if (!response.ok) {
+          console.error("Failed to fetch trips");
+          setTrips([]);
+          return;
+        }
 
-        return {
-          id: trip.id || trip._id || "",
-          image: trip.image || "",
-          title: trip.title,
-          startDate: trip.startDate,
-          endDate: trip.endDate,
-          isOwner,
-          role: userRole,
-          isShared,
-        };
-      });
+        const data: TripFromAPI[] = await response.json();
 
-      setTrips(mappedTrips);
+        // Mapper les données avec les informations de propriété
+        const mappedTrips: Trip[] = data.map((trip) => {
+          const isOwner = trip.ownerId === user._id;
+          const userRole = isOwner
+            ? "OWNER"
+            : trip.collaborators[0]?.role || "VIEWER";
+          const isShared = !isOwner || trip.collaborators.length > 0; // Voyage partagé si pas propriétaire ou s'il y a des collaborateurs
+
+          return {
+            id: trip.id || trip._id || "",
+            image: trip.image || "",
+            title: trip.title,
+            startDate: trip.startDate,
+            endDate: trip.endDate,
+            isOwner,
+            role: userRole,
+            isShared,
+          };
+        });
+
+        setTrips(mappedTrips);
+      } catch (error) {
+        console.error("Failed to fetch trips", error);
+        setTrips([]);
+      } finally {
+        setIsTripsLoading(false);
+      }
     };
 
     fetchTrips();
@@ -122,6 +147,49 @@ export default function TripsPageClient() {
   const filteredTrips = trips.filter((trip: Trip) =>
     trip.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const renderTripsGrid = () => {
+    if (isTripsLoading) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <NewTripPolaroid />
+          {POLAROID_SKELETON_KEYS.map((key) => (
+            <PolaroidSkeleton key={`trip-skeleton-${key}`} />
+          ))}
+        </div>
+      );
+    }
+
+    if (filteredTrips.length === 0 && searchQuery) {
+      return (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">
+            Aucun voyage trouvé pour votre recherche
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {/* Polaroid "Nouveau voyage" */}
+        <NewTripPolaroid />
+
+        {/* Liste des voyages */}
+        {filteredTrips.map((trip) => (
+          <PolaroidCard
+            key={trip.id}
+            id={trip.id}
+            image={trip.image}
+            title={trip.title}
+            startDate={formatDate(trip.startDate)}
+            endDate={formatDate(trip.endDate)}
+            isShared={trip.isShared}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#f6e6d1] py-8">
@@ -149,31 +217,7 @@ export default function TripsPageClient() {
         </div>
 
         {/* Grille de polaroids */}
-        {filteredTrips.length === 0 && searchQuery ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              Aucun voyage trouvé pour votre recherche
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {/* Polaroid "Nouveau voyage" */}
-            <NewTripPolaroid />
-
-            {/* Liste des voyages */}
-            {filteredTrips.map((trip) => (
-              <PolaroidCard
-                key={trip.id}
-                id={trip.id}
-                image={trip.image}
-                title={trip.title}
-                startDate={formatDate(trip.startDate)}
-                endDate={formatDate(trip.endDate)}
-                isShared={trip.isShared}
-              />
-            ))}
-          </div>
-        )}
+        {renderTripsGrid()}
       </div>
     </div>
   );

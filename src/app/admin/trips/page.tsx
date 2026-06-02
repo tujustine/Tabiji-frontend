@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import Image from "next/image";
 import { useAdmin } from "@/hooks/useAdmin";
 import { AdminTrip } from "@/types";
+import TravelLoader from "@/components/ui/TravelLoader";
 import { IoSearch, IoTrash } from "react-icons/io5";
 
 export default function AdminTripsPage() {
@@ -217,11 +218,7 @@ export default function AdminTripsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-lg">Chargement des voyages...</div>
-      </div>
-    );
+    return <TravelLoader label="Chargement des voyages..." />;
   }
 
   if (error) {

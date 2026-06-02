@@ -21,6 +21,8 @@ export default function DashboardClient() {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [allTrips, setAllTrips] = useState<ApiTrip[]>([]);
+  const [isTripsLoading, setIsTripsLoading] = useState(true);
+  const [isRecentTripsLoading, setIsRecentTripsLoading] = useState(true);
   const [recentTripsList, setRecentTripsList] = useState<
     { id: string; viewedAt: string }[]
   >([]);
@@ -41,8 +43,10 @@ export default function DashboardClient() {
     const loadTrips = async () => {
       if (!token) {
         setAllTrips([]);
+        setIsTripsLoading(false);
         return;
       }
+      setIsTripsLoading(true);
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/trips`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -52,6 +56,8 @@ export default function DashboardClient() {
         setAllTrips(data);
       } catch {
         setAllTrips([]);
+      } finally {
+        setIsTripsLoading(false);
       }
     };
     loadTrips();
@@ -62,20 +68,24 @@ export default function DashboardClient() {
     const loadRecentTrips = async () => {
       if (!token) {
         setRecentTripsList([]);
+        setIsRecentTripsLoading(false);
         return;
       }
+      setIsRecentTripsLoading(true);
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/user/recent-trips`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         if (!res.ok) throw new Error("Failed to fetch recent trips");
         const data: { id: string; viewedAt: string }[] = await res.json();
         setRecentTripsList(data);
       } catch {
         setRecentTripsList([]);
+      } finally {
+        setIsRecentTripsLoading(false);
       }
     };
     loadRecentTrips();
@@ -87,7 +97,7 @@ export default function DashboardClient() {
     .filter((t) => new Date(t.startDate) > now)
     .sort(
       (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
     )
     .map((t) => ({
       id: t.id || t._id || "",
@@ -150,7 +160,7 @@ export default function DashboardClient() {
             startDate: new Date().toISOString(),
             endDate: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -193,6 +203,7 @@ export default function DashboardClient() {
           title="À venir"
           trips={upcomingTrips}
           emptyMessage="Aucun voyage prévu pour le moment"
+          isLoading={isTripsLoading}
         />
 
         {/* Section Vu récemment */}
@@ -200,6 +211,7 @@ export default function DashboardClient() {
           title="Vu récemment"
           trips={recentTrips}
           emptyMessage="Aucun voyage récent"
+          isLoading={isTripsLoading || isRecentTripsLoading}
         />
 
         {/* Section Mes voyages */}
@@ -207,6 +219,7 @@ export default function DashboardClient() {
           title="Mes voyages"
           trips={allTripsForCarousel}
           emptyMessage="Vous n'avez pas encore créé de voyage"
+          isLoading={isTripsLoading}
         />
       </div>
     </div>

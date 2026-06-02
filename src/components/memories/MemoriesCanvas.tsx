@@ -70,7 +70,7 @@ export default function MemoriesCanvas({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const dragRefs = useRef<Map<string, React.RefObject<HTMLElement | null>>>(
-    new Map()
+    new Map(),
   );
 
   const pixelsToPercent = useCallback(
@@ -88,7 +88,7 @@ export default function MemoriesCanvas({
         },
       };
     },
-    [canvasSize]
+    [canvasSize],
   );
 
   const percentToPixels = useCallback(
@@ -98,7 +98,7 @@ export default function MemoriesCanvas({
         y: (yPercent / 100) * canvasSize.height,
       };
     },
-    [canvasSize]
+    [canvasSize],
   );
 
   // Fonction pour obtenir la ref d'un élément draggable
@@ -176,7 +176,7 @@ export default function MemoriesCanvas({
           m.position.x > 100 ||
           m.position.y > 100 ||
           m.size.width > 100 ||
-          m.size.height > 100
+          m.size.height > 100,
       );
 
       if (needsConversion) {
@@ -186,7 +186,7 @@ export default function MemoriesCanvas({
             memory.position.x,
             memory.position.y,
             memory.size.width,
-            memory.size.height
+            memory.size.height,
           );
           return normalizeMemory({
             ...memory,
@@ -276,7 +276,7 @@ export default function MemoriesCanvas({
         return [...prev, normalizeMemory(typedData.memory)];
       });
     },
-    [lastModifiedMemoryId]
+    [lastModifiedMemoryId],
   );
 
   const handleMemoryUpdated = useCallback(
@@ -293,10 +293,10 @@ export default function MemoriesCanvas({
             return normalizeMemory(typedData.memory);
           }
           return m;
-        })
+        }),
       );
     },
-    [lastModifiedMemoryId]
+    [lastModifiedMemoryId],
   );
 
   const handleMemoryDeleted = useCallback(
@@ -309,7 +309,7 @@ export default function MemoriesCanvas({
       }
       setMemories((prev) => prev.filter((m) => m.id !== typedData.memoryId));
     },
-    [lastModifiedMemoryId]
+    [lastModifiedMemoryId],
   );
 
   // Handler pour les changements de titre en temps réel
@@ -320,7 +320,7 @@ export default function MemoriesCanvas({
         setCurrentTitle(typedData.title);
       }
     },
-    [tripId]
+    [tripId],
   );
 
   // Écouter les événements Socket.IO pour la synchronisation en temps réel
@@ -361,7 +361,7 @@ export default function MemoriesCanvas({
         if (memory.type === "text") {
           return true;
         }
-        
+
         // Images / vidéos : garder si URL dans content ou dans media[]
         const shouldKeep = resolveMemoryContentUrl(memory) !== "";
         return shouldKeep;
@@ -429,7 +429,7 @@ export default function MemoriesCanvas({
   // Gérer l'upload de fichier
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
-    type: "image" | "video"
+    type: "image" | "video",
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -484,7 +484,7 @@ export default function MemoriesCanvas({
             Authorization: `Bearer ${token}`,
           },
           body: formData,
-        }
+        },
       );
 
       if (!uploadResponse.ok) {
@@ -493,10 +493,10 @@ export default function MemoriesCanvas({
           "Upload failed with status:",
           uploadResponse.status,
           "Response:",
-          errorText
+          errorText,
         );
         throw new Error(
-          `Erreur lors de l'upload: ${uploadResponse.status} - ${errorText}`
+          `Erreur lors de l'upload: ${uploadResponse.status} - ${errorText}`,
         );
       }
 
@@ -514,7 +514,7 @@ export default function MemoriesCanvas({
           body: JSON.stringify({
             content: mediaData.url,
           }),
-        }
+        },
       );
 
       if (!updateResponse.ok) {
@@ -524,8 +524,8 @@ export default function MemoriesCanvas({
       // Étape 4: Mettre à jour l'état local
       setMemories((prev) =>
         prev.map((m) =>
-          m.id === createdMemory!.id ? { ...m, content: mediaData.url } : m
-        )
+          m.id === createdMemory!.id ? { ...m, content: mediaData.url } : m,
+        ),
       );
     } catch (error) {
       console.error("Erreur upload:", error);
@@ -533,7 +533,7 @@ export default function MemoriesCanvas({
       // Supprimer immédiatement du state local si la mémoire a été créée
       if (createdMemory) {
         setMemories((prev) =>
-          (prev || []).filter((m) => m.id !== createdMemory!.id)
+          (prev || []).filter((m) => m.id !== createdMemory!.id),
         );
 
         // Supprimer aussi du serveur pour éviter les mémoires orphelines
@@ -547,7 +547,7 @@ export default function MemoriesCanvas({
         } catch (deleteError) {
           console.error(
             "Erreur lors de la suppression de la mémoire orpheline:",
-            deleteError
+            deleteError,
           );
         }
       }
@@ -581,7 +581,7 @@ export default function MemoriesCanvas({
     };
 
     setMemories((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, position: positionPercent } : m))
+      prev.map((m) => (m.id === id ? { ...m, position: positionPercent } : m)),
     );
   };
 
@@ -631,14 +631,14 @@ export default function MemoriesCanvas({
         pendingTimeouts.current.delete(id);
       }
     },
-    [memories, token]
+    [memories, token],
   );
 
   // Normaliser la position après le drag et déclencher la sauvegarde automatique
   const handleDragStop = (id: string) => {
     // Normaliser d'abord localement
     setMemories((prev) =>
-      prev.map((m) => (m.id === id ? normalizeMemory(m) : m))
+      prev.map((m) => (m.id === id ? normalizeMemory(m) : m)),
     );
 
     // Annuler tout timeout en cours pour cet élément
@@ -715,7 +715,7 @@ export default function MemoriesCanvas({
             return normalizeMemory(updatedMemory);
           }
           return m;
-        })
+        }),
       );
       setLastModifiedMemoryId(resizeModal.memoryId);
 
@@ -742,7 +742,7 @@ export default function MemoriesCanvas({
 
       if (!response.ok) {
         throw new Error(
-          "Erreur lors de la suppression: " + response.statusText
+          "Erreur lors de la suppression: " + response.statusText,
         );
       }
 
@@ -821,7 +821,7 @@ export default function MemoriesCanvas({
         setCurrentTitle(tripTitle);
       }
     },
-    [token, canEdit, tripId, tripTitle]
+    [token, canEdit, tripId, tripTitle],
   );
 
   // Handler pour le changement de titre avec debounce
@@ -841,7 +841,7 @@ export default function MemoriesCanvas({
         }
       }, 1000);
     },
-    [tripTitle, updateTripTitle]
+    [tripTitle, updateTripTitle],
   );
 
   // Nettoyer le timeout au démontage
@@ -877,20 +877,20 @@ export default function MemoriesCanvas({
           body: JSON.stringify({
             content: finalContent,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
         throw new Error(
-          "Erreur lors de la mise à jour du texte: " + response.statusText
+          "Erreur lors de la mise à jour du texte: " + response.statusText,
         );
       }
 
       // Mettre à jour localement et marquer comme modifié
       setMemories((prev) =>
         (prev || []).map((m) =>
-          m.id === textEditModal.memoryId ? { ...m, content: finalContent } : m
-        )
+          m.id === textEditModal.memoryId ? { ...m, content: finalContent } : m,
+        ),
       );
       setLastModifiedMemoryId(textEditModal.memoryId);
 
@@ -917,7 +917,7 @@ export default function MemoriesCanvas({
 
     // Mettre à jour localement immédiatement
     setMemories((prev) =>
-      (prev || []).map((m) => (m.id === id ? { ...m, zIndex: newZIndex } : m))
+      (prev || []).map((m) => (m.id === id ? { ...m, zIndex: newZIndex } : m)),
     );
 
     // Sauvegarder automatiquement en arrière-plan avec timeout annulable
@@ -950,7 +950,7 @@ export default function MemoriesCanvas({
 
         if (!response.ok) {
           throw new Error(
-            "Erreur lors de la mise à jour du zIndex: " + response.statusText
+            "Erreur lors de la mise à jour du zIndex: " + response.statusText,
           );
         }
 
@@ -1007,7 +1007,10 @@ export default function MemoriesCanvas({
                   if (titleUpdateTimeoutRef.current) {
                     clearTimeout(titleUpdateTimeoutRef.current);
                   }
-                  if (e.target.value.trim() !== tripTitle.trim() && e.target.value.trim() !== "") {
+                  if (
+                    e.target.value.trim() !== tripTitle.trim() &&
+                    e.target.value.trim() !== ""
+                  ) {
                     updateTripTitle(e.target.value.trim());
                   } else if (e.target.value.trim() === "") {
                     // Restaurer le titre si vide
@@ -1124,14 +1127,14 @@ export default function MemoriesCanvas({
 
           {Array.from(
             new Map(
-              memories?.map((memory) => [memory.id, memory]) || []
-            ).values()
+              memories?.map((memory) => [memory.id, memory]) || [],
+            ).values(),
           ).map((memory) => {
             const dragRef = getDragRef(memory.id);
             // Convertir les pourcentages en pixels pour react-draggable
             const positionInPixels = percentToPixels(
               memory.position.x,
-              memory.position.y
+              memory.position.y,
             );
 
             // Calculer les bounds en pixels pour que l'élément reste dans le canvas
@@ -1166,7 +1169,9 @@ export default function MemoriesCanvas({
                 bounds={canEdit ? bounds : undefined}
                 disabled={!canEdit}
                 cancel="button"
-                handle={memory.type === "text" ? ".memory-text-drag" : undefined}
+                handle={
+                  memory.type === "text" ? ".memory-text-drag" : undefined
+                }
               >
                 <div
                   className="absolute min-h-0 min-w-0 max-w-full cursor-move rounded-xl border-0 bg-transparent p-0"
@@ -1178,7 +1183,7 @@ export default function MemoriesCanvas({
                   }}
                   onClick={(e) => {
                     // Ne sélectionner que si on n'a pas cliqué sur un bouton
-                    if (!(e.target as HTMLElement).closest('button')) {
+                    if (!(e.target as HTMLElement).closest("button")) {
                       setSelectedMemoryId(memory.id);
                     }
                   }}
@@ -1190,7 +1195,10 @@ export default function MemoriesCanvas({
                     }
                   }}
                   onMouseDown={(e) => {
-                    if (canEdit && !(e.target as HTMLElement).closest("button")) {
+                    if (
+                      canEdit &&
+                      !(e.target as HTMLElement).closest("button")
+                    ) {
                       e.preventDefault();
                     }
                   }}
@@ -1253,7 +1261,9 @@ export default function MemoriesCanvas({
                           className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-green-500 text-gray-800 transition-colors hover:bg-green-600"
                           title="Redimensionner"
                         >
-                          <span className="text-xs font-bold leading-none">⤡</span>
+                          <span className="text-xs font-bold leading-none">
+                            ⤡
+                          </span>
                         </button>
                       </div>
                     )}
@@ -1295,7 +1305,10 @@ export default function MemoriesCanvas({
                               : undefined
                           }
                           onKeyDown={(e) => {
-                            if (canEdit && (e.key === "Enter" || e.key === " ")) {
+                            if (
+                              canEdit &&
+                              (e.key === "Enter" || e.key === " ")
+                            ) {
                               e.preventDefault();
                               e.stopPropagation();
                               openTextEditModal(memory.id);
@@ -1305,19 +1318,73 @@ export default function MemoriesCanvas({
                       </div>
                     )}
 
-                      {memory.type === "image" &&
-                        (resolveMemoryContentUrl(memory) ? (
-                          <div className="w-full h-full relative rounded-xl overflow-hidden">
-                            <Image
-                              src={resolveMemoryContentUrl(memory)}
-                              alt="Souvenir"
-                              fill
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              className="object-contain pointer-events-none"
-                            />
-                            {/* Superposition avec boutons */}
-                            {canEdit && (
-                              <div className="pointer-events-auto absolute left-1 top-1 z-10 flex flex-nowrap gap-1 opacity-100 transition-opacity duration-200 md:left-2 md:top-2 md:gap-2 md:opacity-0 md:group-hover:opacity-100">
+                    {memory.type === "image" &&
+                      (resolveMemoryContentUrl(memory) ? (
+                        <div className="w-full h-full relative rounded-xl overflow-hidden">
+                          <Image
+                            src={resolveMemoryContentUrl(memory)}
+                            alt="Souvenir"
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="object-contain pointer-events-none"
+                          />
+                          {/* Superposition avec boutons */}
+                          {canEdit && (
+                            <div className="pointer-events-auto absolute left-1 top-1 z-10 flex flex-nowrap gap-1 opacity-100 transition-opacity duration-200 md:left-2 md:top-2 md:gap-2 md:opacity-0 md:group-hover:opacity-100">
+                              {/* Bouton suppression (rouge) */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteMemory(memory.id);
+                                }}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-red-500 text-gray-800 transition-colors hover:bg-red-600"
+                                title="Supprimer"
+                              >
+                                <IoMdClose size={12} />
+                              </button>
+
+                              {/* Bouton redimensionnement (vert) */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openResizeModal(memory.id);
+                                }}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-green-500 text-gray-800 transition-colors hover:bg-green-600"
+                                title="Redimensionner"
+                              >
+                                <span className="text-xs font-bold leading-none">
+                                  ⤡
+                                </span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
+                          <span className="text-sm">Chargement...</span>
+                        </div>
+                      ))}
+
+                    {memory.type === "video" &&
+                      (resolveMemoryContentUrl(memory) ? (
+                        <div className="w-full h-full relative rounded-xl overflow-hidden bg-black">
+                          <video
+                            src={resolveMemoryContentUrl(memory)}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="h-full w-full object-contain"
+                            title="Vidéo souvenir"
+                          />
+                          {/* Barre draggable large avec boutons */}
+                          {canEdit && (
+                            <div className="drag-handle absolute left-0 right-0 top-0 z-10 flex cursor-move items-center rounded-t-xl bg-black/30 px-1.5 py-1 opacity-100 transition-opacity duration-200 sm:px-2 sm:py-1.5 md:opacity-0 md:group-hover:opacity-100">
+                              {/* Boutons à gauche */}
+                              <div className="flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto sm:gap-2 [scrollbar-width:thin]">
                                 {/* Bouton suppression (rouge) */}
                                 <button
                                   type="button"
@@ -1348,71 +1415,17 @@ export default function MemoriesCanvas({
                                   </span>
                                 </button>
                               </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
-                            <span className="text-sm">Chargement...</span>
-                          </div>
-                        ))}
 
-                      {memory.type === "video" &&
-                        (resolveMemoryContentUrl(memory) ? (
-                          <div className="w-full h-full relative rounded-xl overflow-hidden bg-black">
-                            <video
-                              src={resolveMemoryContentUrl(memory)}
-                              controls
-                              playsInline
-                              preload="metadata"
-                              className="h-full w-full object-contain"
-                              title="Vidéo souvenir"
-                            />
-                            {/* Barre draggable large avec boutons */}
-                            {canEdit && (
-                              <div className="drag-handle absolute left-0 right-0 top-0 z-10 flex cursor-move items-center rounded-t-xl bg-black/30 px-1.5 py-1 opacity-100 transition-opacity duration-200 sm:px-2 sm:py-1.5 md:opacity-0 md:group-hover:opacity-100">
-                                {/* Boutons à gauche */}
-                                <div className="flex shrink-0 flex-nowrap items-center gap-1 overflow-x-auto sm:gap-2 [scrollbar-width:thin]">
-                                  {/* Bouton suppression (rouge) */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteMemory(memory.id);
-                                    }}
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                    className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-red-500 text-gray-800 transition-colors hover:bg-red-600"
-                                    title="Supprimer"
-                                  >
-                                    <IoMdClose size={12} />
-                                  </button>
-
-                                  {/* Bouton redimensionnement (vert) */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openResizeModal(memory.id);
-                                    }}
-                                    onPointerDown={(e) => e.stopPropagation()}
-                                    className="flex h-6 w-6 shrink-0 touch-manipulation items-center justify-center rounded-full bg-green-500 text-gray-800 transition-colors hover:bg-green-600"
-                                    title="Redimensionner"
-                                  >
-                                    <span className="text-xs font-bold leading-none">
-                                      ⤡
-                                    </span>
-                                  </button>
-                                </div>
-
-                                {/* Zone de drag au centre et à droite (plus large) */}
-                                <div className="flex-1 h-full cursor-move ml-4"></div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
-                            <span className="text-sm">Chargement...</span>
-                          </div>
-                        ))}
+                              {/* Zone de drag au centre et à droite (plus large) */}
+                              <div className="flex-1 h-full cursor-move ml-4"></div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500">
+                          <span className="text-sm">Chargement...</span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               </Draggable>
@@ -1445,7 +1458,7 @@ export default function MemoriesCanvas({
                     setResizeModal((prev) =>
                       prev
                         ? { ...prev, width: Number.parseFloat(e.target.value) }
-                        : null
+                        : null,
                     )
                   }
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
@@ -1466,7 +1479,7 @@ export default function MemoriesCanvas({
                     setResizeModal((prev) =>
                       prev
                         ? { ...prev, height: Number.parseFloat(e.target.value) }
-                        : null
+                        : null,
                     )
                   }
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
@@ -1507,7 +1520,7 @@ export default function MemoriesCanvas({
                 value={textEditModal.content}
                 onChange={(e) =>
                   setTextEditModal((prev) =>
-                    prev ? { ...prev, content: e.target.value } : null
+                    prev ? { ...prev, content: e.target.value } : null,
                   )
                 }
                 placeholder="Tapez votre texte ici..."

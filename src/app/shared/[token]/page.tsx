@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import TravelLoader from "@/components/ui/TravelLoader";
 
 interface SharedTrip {
   id: string;
@@ -119,14 +120,7 @@ export default function SharedTripPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#f6e6d1] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7a8450] mx-auto mb-4"></div>
-          <p className="text-gray-700">Chargement de l&apos;invitation...</p>
-        </div>
-      </div>
-    );
+    return <TravelLoader fullScreen label="Chargement de l'invitation..." />;
   }
 
   if (error) {

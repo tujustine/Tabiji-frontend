@@ -128,7 +128,7 @@ describe("TripDetailClient", () => {
 
       render(<TripDetailClient tripId="trip-123" />);
 
-      expect(screen.getByText("Chargement...")).toBeInTheDocument();
+      expect(screen.getByText("Chargement du voyage...")).toBeInTheDocument();
     });
 
     it("devrait charger et afficher les données du voyage", async () => {
