@@ -12,7 +12,6 @@ import { useFavorites } from "@/contexts/FavoritesContext";
 import Modal from "@/components/modal/Modal";
 import PolaroidCard from "@/components/polaroid/PolaroidCard";
 import { formatDate } from "@/utils/dateFormatter";
-import type { Place } from "@/types";
 
 interface Trip {
   id: string;
@@ -21,7 +20,7 @@ interface Trip {
   startDate: string;
   endDate: string;
   destination?: string;
-  places?: Place[];
+  placesCount: number;
 }
 
 interface TripFromAPI {
@@ -32,7 +31,7 @@ interface TripFromAPI {
   startDate: string;
   endDate: string;
   destination?: string;
-  places?: Place[];
+  placesCount?: number;
 }
 
 export default function ProfileClient() {
@@ -108,7 +107,7 @@ export default function ProfileClient() {
           startDate: trip.startDate,
           endDate: trip.endDate,
           destination: trip.destination,
-          places: trip.places || [],
+          placesCount: trip.placesCount ?? 0,
         }));
 
         setAllTrips(trips);
@@ -152,7 +151,7 @@ export default function ProfileClient() {
 
   // Calculer le nombre total de lieux visités dans les voyages passés
   const placesVisited = pastTrips.reduce(
-    (acc, trip) => acc + (trip.places?.length || 0),
+    (acc, trip) => acc + trip.placesCount,
     0
   );
 
