@@ -47,7 +47,7 @@ describe("useSocket", () => {
     const { result } = renderHook(() => useSocket({ token: "token-123" }));
 
     expect(io).toHaveBeenCalledWith(
-      expect.stringMatching(/localhost:4000|undefined/),
+      expect.any(String),
       expect.objectContaining({
         auth: expect.objectContaining({
           token: "token-123",

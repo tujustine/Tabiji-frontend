@@ -40,6 +40,21 @@ jest.mock("react-hot-toast", () => ({
   },
 }));
 
+jest.mock(
+  "@/hooks/useSocket",
+  () => ({
+    useSocket: () => ({
+      socket: null,
+      isConnected: false,
+      error: null,
+      emit: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn(),
+    }),
+  }),
+  { virtual: true },
+);
+
 const mockTrip: Trip = {
   _id: "trip-123",
   title: "Voyage à Paris",

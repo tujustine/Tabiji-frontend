@@ -23,6 +23,10 @@ import type {
 // Types d'actions
 type TripAction =
   | { type: "SET_TRIP"; payload: Trip }
+  | {
+      type: "APPLY_REALTIME_UPDATE";
+      payload: { trip?: Partial<Trip>; customCategories?: string[] };
+    }
   | { type: "UPDATE_BASIC_INFO"; payload: Partial<Trip> }
   | { type: "ADD_PLACE"; payload: Place }
   | { type: "REMOVE_PLACE"; payload: string }
@@ -84,6 +88,16 @@ function tripReducer(state: TripContextState, action: TripAction): TripContextSt
   switch (action.type) {
     case "SET_TRIP":
       return { ...state, trip: action.payload };
+
+    case "APPLY_REALTIME_UPDATE":
+      return {
+        ...state,
+        trip: action.payload.trip
+          ? { ...state.trip, ...action.payload.trip }
+          : state.trip,
+        customCategories:
+          action.payload.customCategories ?? state.customCategories,
+      };
 
     case "UPDATE_BASIC_INFO":
       return { ...state, trip: { ...state.trip, ...action.payload } };
@@ -230,7 +244,9 @@ function tripReducer(state: TripContextState, action: TripAction): TripContextSt
       if (category && !DEFAULT_CATEGORIES.includes(category) && !state.customCategories.includes(category)) {
         return {
           ...state,
-          customCategories: [...state.customCategories, category].sort(),
+          customCategories: [...state.customCategories, category].sort((a, b) =>
+            a.localeCompare(b)
+          ),
         };
       }
       return state;
@@ -282,7 +298,9 @@ export function useTrip() {
 // Fonction pour obtenir toutes les catégories disponibles
 export function getAllCategories(places: Place[], customCategories: string[] = []) {
   // Récupérer toutes les catégories utilisées dans les lieux
-  const usedCategories = new Set(places.map(p => p.category).filter(c => c && c.trim()));
+  const usedCategories = new Set(places.map(p => p.category).filter(c => c?.trim()));
   // Combiner avec les catégories par défaut et personnalisées
-  return [...new Set([...DEFAULT_CATEGORIES, ...usedCategories, ...customCategories])].sort();
+  return [...new Set([...DEFAULT_CATEGORIES, ...usedCategories, ...customCategories])].sort((a, b) =>
+    a.localeCompare(b)
+  );
 }

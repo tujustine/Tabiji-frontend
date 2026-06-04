@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -24,8 +24,9 @@ import {
   getAllCategories,
 } from "@/contexts/TripContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
+import { useSocket } from "@/hooks/useSocket";
 import TravelLoader from "@/components/ui/TravelLoader";
-import type { Place, Memory, Trip } from "@/types";
+import type { Place, Memory, Trip, TodoItem, DaySchedule } from "@/types";
 
 // Composant pour l'aperçu miniature du tableau de souvenirs
 function MemoriesPreview({ memories }: Readonly<{ memories: Memory[] }>) {
@@ -132,6 +133,86 @@ interface TripDetailClientProps {
   tripId: string;
 }
 
+type TripDetailsRealtimeUpdate = {
+  trip?: Partial<
+    Pick<
+      Trip,
+      | "title"
+      | "startDate"
+      | "endDate"
+      | "image"
+      | "places"
+      | "todoItems"
+      | "daySchedule"
+    >
+  >;
+  customCategories?: string[];
+};
+
+const DEFAULT_TRIP_CATEGORIES = new Set([
+  "Restaurants",
+  "Hôtels",
+  "Activités",
+  "Monuments",
+  "Transport",
+]);
+
+function removePlaceFromSchedule(
+  daySchedule: DaySchedule[],
+  placeId: string,
+): DaySchedule[] {
+  return daySchedule.map((day) => ({
+    ...day,
+    placeIds: day.placeIds.filter((id) => id !== placeId),
+  }));
+}
+
+function assignPlaceToDay(
+  daySchedule: DaySchedule[],
+  placeId: string,
+  day: number,
+): DaySchedule[] {
+  const nextDaySchedule = [...daySchedule];
+  const targetDayExists = nextDaySchedule.some((schedule) => schedule.day === day);
+
+  if (!targetDayExists && day > 0) {
+    nextDaySchedule.push({
+      day,
+      date: new Date(),
+      placeIds: [],
+    });
+  }
+
+  return nextDaySchedule
+    .map((schedule) => ({
+      ...schedule,
+      placeIds: schedule.placeIds.filter((id) => id !== placeId),
+    }))
+    .map((schedule) =>
+      schedule.day === day
+        ? { ...schedule, placeIds: [...schedule.placeIds, placeId] }
+        : schedule,
+    );
+}
+
+function addCustomCategory(
+  currentCategories: string[],
+  category: string,
+): string[] {
+  const normalizedCategory = category.trim();
+  if (
+    !normalizedCategory ||
+    DEFAULT_TRIP_CATEGORIES.has(normalizedCategory) ||
+    currentCategories.includes(normalizedCategory)
+  ) {
+    return currentCategories;
+  }
+
+  return [...currentCategories, normalizedCategory].sort((a, b) =>
+    a.localeCompare(b),
+  );
+}
+
 function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
   const { token, isInitialized } = useAuth();
   const router = useRouter();
@@ -154,6 +235,153 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
     username: string;
     email: string;
   } | null>(null);
+  const { socket, isConnected, emit, on, off } = useSocket({
+    token: token || undefined,
+    tripId,
+    enabled: isInitialized && Boolean(token),
+  });
+
+  const broadcastTripDetailsUpdate = useCallback(
+    (update: TripDetailsRealtimeUpdate) => {
+      if (!userPermissions.canEdit || !isConnected) return;
+      emit("trip:details:update", update);
+    },
+    [emit, isConnected, userPermissions.canEdit],
+  );
+
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    const handleTripDetailsUpdated = (data: unknown) => {
+      if (!data || typeof data !== "object") return;
+
+      const update = data as TripDetailsRealtimeUpdate;
+      dispatch({
+        type: "APPLY_REALTIME_UPDATE",
+        payload: {
+          trip: update.trip,
+          customCategories: update.customCategories,
+        },
+      });
+    };
+
+    on("trip:details:updated", handleTripDetailsUpdated);
+
+    return () => {
+      off("trip:details:updated", handleTripDetailsUpdated);
+    };
+  }, [dispatch, isConnected, off, on, socket]);
+
+  const updateBasicInfo = useCallback(
+    (updates: Partial<Trip>) => {
+      dispatch({ type: "UPDATE_BASIC_INFO", payload: updates });
+      broadcastTripDetailsUpdate({ trip: updates });
+    },
+    [broadcastTripDetailsUpdate, dispatch],
+  );
+
+  const addTodo = useCallback(
+    (todo: TodoItem) => {
+      const todoItems = [...(trip.todoItems || []), todo];
+      dispatch({ type: "ADD_TODO", payload: todo });
+      broadcastTripDetailsUpdate({ trip: { todoItems } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.todoItems],
+  );
+
+  const removeTodo = useCallback(
+    (id: string) => {
+      const todoItems = (trip.todoItems || []).filter((todo) => todo.id !== id);
+      dispatch({ type: "REMOVE_TODO", payload: id });
+      broadcastTripDetailsUpdate({ trip: { todoItems } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.todoItems],
+  );
+
+  const toggleTodo = useCallback(
+    (id: string) => {
+      const todoItems = (trip.todoItems || []).map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+      );
+      dispatch({ type: "TOGGLE_TODO", payload: id });
+      broadcastTripDetailsUpdate({ trip: { todoItems } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.todoItems],
+  );
+
+  const reorderTodos = useCallback(
+    (todoItems: TodoItem[]) => {
+      dispatch({ type: "REORDER_TODOS", payload: todoItems });
+      broadcastTripDetailsUpdate({ trip: { todoItems } });
+    },
+    [broadcastTripDetailsUpdate, dispatch],
+  );
+
+  const addPlace = useCallback(
+    (place: Place) => {
+      const places = [...(trip.places || []), place];
+      dispatch({ type: "ADD_PLACE", payload: place });
+      broadcastTripDetailsUpdate({ trip: { places } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.places],
+  );
+
+  const removePlace = useCallback(
+    (id: string) => {
+      const places = (trip.places || []).filter((place) => place.id !== id);
+      const daySchedule = removePlaceFromSchedule(trip.daySchedule || [], id);
+      dispatch({ type: "REMOVE_PLACE", payload: id });
+      broadcastTripDetailsUpdate({ trip: { places, daySchedule } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.daySchedule, trip.places],
+  );
+
+  const updatePlace = useCallback(
+    (id: string, updates: Partial<Place>) => {
+      const places = (trip.places || []).map((place) =>
+        place.id === id ? { ...place, ...updates } : place,
+      );
+      dispatch({ type: "UPDATE_PLACE", payload: { id, updates } });
+      broadcastTripDetailsUpdate({ trip: { places } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.places],
+  );
+
+  const addCategory = useCallback(
+    (category: string) => {
+      const nextCustomCategories = addCustomCategory(customCategories, category);
+      dispatch({ type: "ADD_CUSTOM_CATEGORY", payload: category });
+      broadcastTripDetailsUpdate({ customCategories: nextCustomCategories });
+    },
+    [broadcastTripDetailsUpdate, customCategories, dispatch],
+  );
+
+  const assignPlace = useCallback(
+    (placeId: string, day: number) => {
+      const daySchedule = assignPlaceToDay(
+        trip.daySchedule || [],
+        placeId,
+        day,
+      );
+      dispatch({ type: "ASSIGN_PLACE_TO_DAY", payload: { placeId, day } });
+      broadcastTripDetailsUpdate({ trip: { daySchedule } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.daySchedule],
+  );
+
+  const reorderPlacesInDay = useCallback(
+    (day: number, placeIds: string[]) => {
+      const daySchedule = (trip.daySchedule || []).map((schedule) =>
+        schedule.day === day ? { ...schedule, placeIds } : schedule,
+      );
+      dispatch({
+        type: "REORDER_PLACES_IN_DAY",
+        payload: { day, placeIds },
+      });
+      broadcastTripDetailsUpdate({ trip: { daySchedule } });
+    },
+    [broadcastTripDetailsUpdate, dispatch, trip.daySchedule],
+  );
 
   // Charger les données du voyage
   useEffect(() => {
@@ -252,7 +480,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
         todoItems: Array.isArray(data.todoItems) ? data.todoItems : [],
         daySchedule: Array.isArray(data.daySchedule) ? data.daySchedule : [],
         ...data,
-      } as Trip;
+      };
     };
 
     const recordRecentTrip = async (
@@ -452,7 +680,7 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
       coordinates: { lat, lng },
     };
 
-    dispatch({ type: "ADD_PLACE", payload: newPlace });
+    addPlace(newPlace);
 
     setIsMapAddMode(false);
 
@@ -587,36 +815,20 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                 endDate={trip.endDate || ""}
                 isFavorite={isFavorite(trip._id || tripId)}
                 canEdit={userPermissions.canEdit}
-                onImageChange={(image) =>
-                  dispatch({ type: "UPDATE_BASIC_INFO", payload: { image } })
-                }
-                onTitleChange={(title) =>
-                  dispatch({ type: "UPDATE_BASIC_INFO", payload: { title } })
-                }
+                onImageChange={(image) => updateBasicInfo({ image })}
+                onTitleChange={(title) => updateBasicInfo({ title })}
                 onStartDateChange={(startDate) => {
                   if (trip.endDate && startDate > trip.endDate) {
-                    dispatch({
-                      type: "UPDATE_BASIC_INFO",
-                      payload: { startDate, endDate: startDate },
-                    });
+                    updateBasicInfo({ startDate, endDate: startDate });
                   } else {
-                    dispatch({
-                      type: "UPDATE_BASIC_INFO",
-                      payload: { startDate },
-                    });
+                    updateBasicInfo({ startDate });
                   }
                 }}
                 onEndDateChange={(endDate) => {
                   if (trip.startDate && endDate < trip.startDate) {
-                    dispatch({
-                      type: "UPDATE_BASIC_INFO",
-                      payload: { endDate: trip.startDate },
-                    });
+                    updateBasicInfo({ endDate: trip.startDate });
                   } else {
-                    dispatch({
-                      type: "UPDATE_BASIC_INFO",
-                      payload: { endDate },
-                    });
+                    updateBasicInfo({ endDate });
                   }
                 }}
                 onFavoriteToggle={() => {
@@ -663,18 +875,10 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
               <TodoList
                 todos={trip.todoItems || []}
                 canEdit={userPermissions.canEdit}
-                onAddTodo={(todo) =>
-                  dispatch({ type: "ADD_TODO", payload: todo })
-                }
-                onRemoveTodo={(id) =>
-                  dispatch({ type: "REMOVE_TODO", payload: id })
-                }
-                onToggleTodo={(id) =>
-                  dispatch({ type: "TOGGLE_TODO", payload: id })
-                }
-                onReorderTodos={(todos) =>
-                  dispatch({ type: "REORDER_TODOS", payload: todos })
-                }
+                onAddTodo={addTodo}
+                onRemoveTodo={removeTodo}
+                onToggleTodo={toggleTodo}
+                onReorderTodos={reorderTodos}
               />
             </section>
           </div>
@@ -716,18 +920,10 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                     trip.places || [],
                     customCategories,
                   )}
-                  onAddPlace={(place) =>
-                    dispatch({ type: "ADD_PLACE", payload: place })
-                  }
-                  onRemovePlace={(id) =>
-                    dispatch({ type: "REMOVE_PLACE", payload: id })
-                  }
-                  onUpdatePlace={(id, updates) =>
-                    dispatch({ type: "UPDATE_PLACE", payload: { id, updates } })
-                  }
-                  onAddCategory={(category) =>
-                    dispatch({ type: "ADD_CUSTOM_CATEGORY", payload: category })
-                  }
+                  onAddPlace={addPlace}
+                  onRemovePlace={removePlace}
+                  onUpdatePlace={updatePlace}
+                  onAddCategory={addCategory}
                   onMapAddMode={handleMapAddModeChange}
                   isMapAddMode={isMapAddMode}
                 />
@@ -743,24 +939,15 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                 places={trip.places || []}
                 canEdit={userPermissions.canEdit}
                 onAssignToCategory={(placeId, categoryName) =>
-                  dispatch({
-                    type: "UPDATE_PLACE",
-                    payload: {
-                      id: placeId,
-                      updates: { category: categoryName },
-                    },
-                  })
+                  updatePlace(placeId, { category: categoryName })
                 }
                 onEditPlace={(placeId, updates) => {
                   console.log("Edit place:", placeId, updates);
-                  dispatch({
-                    type: "UPDATE_PLACE",
-                    payload: { id: placeId, updates },
-                  });
+                  updatePlace(placeId, updates);
                 }}
                 onDeletePlace={(placeId) => {
                   if (confirm("Êtes-vous sûr de vouloir supprimer ce lieu ?")) {
-                    dispatch({ type: "REMOVE_PLACE", payload: placeId });
+                    removePlace(placeId);
                   }
                 }}
               />
@@ -777,27 +964,10 @@ function TripDetailContent({ tripId }: Readonly<TripDetailClientProps>) {
                 startDate={trip.startDate || ""}
                 endDate={trip.endDate || ""}
                 canEdit={userPermissions.canEdit}
-                onAssignToDay={(placeId, day) =>
-                  dispatch({
-                    type: "ASSIGN_PLACE_TO_DAY",
-                    payload: { placeId, day },
-                  })
-                }
-                onReorderPlaces={(day, placeIds) =>
-                  dispatch({
-                    type: "REORDER_PLACES_IN_DAY",
-                    payload: { day, placeIds },
-                  })
-                }
-                onEditPlace={(placeId, updates) =>
-                  dispatch({
-                    type: "UPDATE_PLACE",
-                    payload: { id: placeId, updates },
-                  })
-                }
-                onDeletePlace={(placeId) =>
-                  dispatch({ type: "REMOVE_PLACE", payload: placeId })
-                }
+                onAssignToDay={assignPlace}
+                onReorderPlaces={reorderPlacesInDay}
+                onEditPlace={updatePlace}
+                onDeletePlace={removePlace}
               />
             </section>
           </div>

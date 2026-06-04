@@ -27,14 +27,21 @@ jest.mock('next/navigation', () => ({
 
 // Mock Socket.IO client
 jest.mock('socket.io-client', () => {
-  return jest.fn(() => ({
+  const mockSocket = {
     on: jest.fn(),
     off: jest.fn(),
     emit: jest.fn(),
     connect: jest.fn(),
     disconnect: jest.fn(),
+    removeAllListeners: jest.fn(),
+    close: jest.fn(),
     connected: true,
-  }));
+  };
+
+  return {
+    __esModule: true,
+    io: jest.fn(() => mockSocket),
+  };
 });
 
 // Configuration globale pour les tests
