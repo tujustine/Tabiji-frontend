@@ -32,7 +32,9 @@ interface MemoriesCanvasProps {
   canEdit?: boolean;
 }
 
-type MemoryRealtimePatch = Partial<Pick<Memory, "position" | "size" | "zIndex">>;
+type MemoryRealtimePatch = Partial<
+  Pick<Memory, "position" | "size" | "zIndex">
+>;
 
 export default function MemoriesCanvas({
   tripId,
@@ -1222,7 +1224,7 @@ export default function MemoriesCanvas({
                   ref={dragRef as React.RefObject<HTMLDivElement>}
                 >
                   <div
-                    className={`relative h-full w-full overflow-hidden rounded-lg group shadow-md ${
+                    className={`relative h-full w-full overflow-hidden rounded-lg group ${
                       memory.type === "text"
                         ? `grid min-h-0 bg-white ${
                             canEdit
