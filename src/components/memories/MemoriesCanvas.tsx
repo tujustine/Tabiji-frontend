@@ -36,6 +36,57 @@ type MemoryRealtimePatch = Partial<
   Pick<Memory, "position" | "size" | "zIndex">
 >;
 
+// Fonction pour normaliser les positions et tailles pour qu'elles restent dans les limites
+function normalizeMemory(memory: Memory): Memory {
+  // Limiter les tailles à un maximum de 80% du canvas
+  const normalizedSize = {
+    width: Math.max(5, Math.min(memory.size.width, 80)),
+    height: Math.max(5, Math.min(memory.size.height, 80)),
+  };
+
+  // Calculer les limites de position en tenant compte de la taille
+  // S'assurer que maxX et maxY ne sont jamais négatifs
+  const maxX = Math.max(0, 100 - normalizedSize.width);
+  const maxY = Math.max(0, 100 - normalizedSize.height);
+
+  // Normaliser les positions pour qu'elles restent dans les limites
+  const normalizedPosition = {
+    x: Math.max(0, Math.min(memory.position.x, maxX)),
+    y: Math.max(0, Math.min(memory.position.y, maxY)),
+  };
+
+  return {
+    ...memory,
+    position: normalizedPosition,
+    size: normalizedSize,
+  };
+}
+
+function mergeMemoryUpdate(
+  currentMemory: Memory,
+  memoryUpdate: Partial<Memory>,
+): Memory {
+  const currentUrl = resolveMemoryContentUrl(currentMemory);
+  const updateContent =
+    typeof memoryUpdate.content === "string"
+      ? memoryUpdate.content.trim()
+      : undefined;
+  const updateMediaUrl = memoryUpdate.media?.[0]?.url?.trim();
+  const isMediaMemory =
+    currentMemory.type === "image" || currentMemory.type === "video";
+
+  const mergedMemory = { ...currentMemory, ...memoryUpdate };
+
+  // Les updates de position peuvent arriver avec content/media vides pendant l'upload.
+  // On conserve alors l'URL déjà connue pour éviter que l'image disparaisse.
+  if (isMediaMemory && currentUrl && !updateContent && !updateMediaUrl) {
+    mergedMemory.content = currentMemory.content;
+    mergedMemory.media = currentMemory.media;
+  }
+
+  return normalizeMemory(mergedMemory);
+}
+
 export default function MemoriesCanvas({
   tripId,
   memories: initialMemories,
@@ -54,6 +105,7 @@ export default function MemoriesCanvas({
     string | null
   >(null);
   const pendingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const pendingUploadMemoryIds = useRef<Set<string>>(new Set());
   const memoriesRef = useRef<Memory[]>([]);
   const activeDragMemoryIdRef = useRef<string | null>(null);
   const lastRealtimeEmitRef = useRef<Map<string, number>>(new Map());
@@ -114,32 +166,6 @@ export default function MemoriesCanvas({
       dragRefs.current.set(id, React.createRef<HTMLElement>());
     }
     return dragRefs.current.get(id);
-  };
-
-  // Fonction pour normaliser les positions et tailles pour qu'elles restent dans les limites
-  const normalizeMemory = (memory: Memory): Memory => {
-    // Limiter les tailles à un maximum de 80% du canvas
-    const normalizedSize = {
-      width: Math.max(5, Math.min(memory.size.width, 80)),
-      height: Math.max(5, Math.min(memory.size.height, 80)),
-    };
-
-    // Calculer les limites de position en tenant compte de la taille
-    // S'assurer que maxX et maxY ne sont jamais négatifs
-    const maxX = Math.max(0, 100 - normalizedSize.width);
-    const maxY = Math.max(0, 100 - normalizedSize.height);
-
-    // Normaliser les positions pour qu'elles restent dans les limites
-    const normalizedPosition = {
-      x: Math.max(0, Math.min(memory.position.x, maxX)),
-      y: Math.max(0, Math.min(memory.position.y, maxY)),
-    };
-
-    return {
-      ...memory,
-      position: normalizedPosition,
-      size: normalizedSize,
-    };
   };
 
   // Mesurer la taille du canvas et gérer le responsive
@@ -328,7 +354,7 @@ export default function MemoriesCanvas({
       setMemories((prev) =>
         prev.map((m) => {
           if (m.id === typedData.memoryId) {
-            return normalizeMemory({ ...m, ...typedData.memory });
+            return mergeMemoryUpdate(m, typedData.memory);
           }
           return m;
         }),
@@ -397,6 +423,10 @@ export default function MemoriesCanvas({
       const filtered = prev.filter((memory) => {
         // Pour les éléments texte, on garde même s'ils sont vides (l'utilisateur peut les éditer)
         if (memory.type === "text") {
+          return true;
+        }
+
+        if (pendingUploadMemoryIds.current.has(memory.id)) {
           return true;
         }
 
@@ -474,6 +504,7 @@ export default function MemoriesCanvas({
 
     setIsUploading(true);
     let createdMemory: Memory | null = null;
+    let uploadedMediaUrl: string | null = null;
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL ||
       process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
@@ -507,6 +538,7 @@ export default function MemoriesCanvas({
       createdMemory = await createResponse.json();
 
       // Ajouter le souvenir au state local
+      pendingUploadMemoryIds.current.add(createdMemory!.id);
       setMemories((prev) => [...(prev || []), normalizeMemory(createdMemory!)]);
       setLastModifiedMemoryId(createdMemory!.id);
 
@@ -539,37 +571,54 @@ export default function MemoriesCanvas({
       }
 
       const mediaData = await uploadResponse.json();
+      uploadedMediaUrl = mediaData.url;
 
-      // Étape 3: Mettre à jour le souvenir avec l'URL du média en base de données
-      const updateResponse = await fetch(
-        `${apiUrl}/memory/${createdMemory!.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            content: mediaData.url,
-          }),
-        },
-      );
-
-      if (!updateResponse.ok) {
-        throw new Error("Erreur lors de la mise à jour du souvenir");
-      }
-
-      // Étape 4: Mettre à jour l'état local
+      // Rendre le média immédiatement affichable, même si la mise à jour content échoue.
       setMemories((prev) =>
         prev.map((m) =>
-          m.id === createdMemory!.id ? { ...m, content: mediaData.url } : m,
+          m.id === createdMemory!.id
+            ? {
+                ...m,
+                content: uploadedMediaUrl!,
+                media: [{ url: uploadedMediaUrl! }],
+              }
+            : m,
         ),
       );
+
+      // Étape 3: Mettre à jour le souvenir avec l'URL du média en base de données
+      try {
+        const updateResponse = await fetch(
+          `${apiUrl}/memory/${createdMemory!.id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              content: uploadedMediaUrl,
+            }),
+          },
+        );
+
+        if (!updateResponse.ok) {
+          console.warn(
+            "Média uploadé, mais content n'a pas pu être synchronisé",
+            updateResponse.status,
+          );
+        }
+      } catch (contentSyncError) {
+        console.warn(
+          "Média uploadé, mais content n'a pas pu être synchronisé",
+          contentSyncError,
+        );
+      }
     } catch (error) {
       console.error("Erreur upload:", error);
 
-      // Supprimer immédiatement du state local si la mémoire a été créée
-      if (createdMemory) {
+      // Supprimer uniquement si aucun fichier n'a été attaché au souvenir.
+      if (createdMemory && !uploadedMediaUrl) {
         setMemories((prev) =>
           (prev || []).filter((m) => m.id !== createdMemory!.id),
         );
@@ -592,6 +641,9 @@ export default function MemoriesCanvas({
 
       toast.error("Erreur lors de l'upload du fichier");
     } finally {
+      if (createdMemory) {
+        pendingUploadMemoryIds.current.delete(createdMemory.id);
+      }
       setIsUploading(false);
       // Réinitialiser l'input
       if (event.target) {
@@ -1339,6 +1391,7 @@ export default function MemoriesCanvas({
                       (resolveMemoryContentUrl(memory) ? (
                         <div className="w-full h-full relative rounded-xl overflow-hidden">
                           <Image
+                            key={resolveMemoryContentUrl(memory)}
                             src={resolveMemoryContentUrl(memory)}
                             alt="Souvenir"
                             fill
