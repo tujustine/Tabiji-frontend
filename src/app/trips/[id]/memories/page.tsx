@@ -134,57 +134,21 @@ export default function MemoriesPage({ params }: MemoriesPageProps) {
       process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
       "http://localhost:4000";
 
-    // Pour chaque mémoire, créer ou mettre à jour via l'API
-    for (const memory of updatedMemories) {
-      try {
-        if (memory.id.startsWith("temp-")) {
-          // Nouvelle mémoire à créer
-          const response = await fetch(`${apiUrl}/trip/${id}/memory`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              type: memory.type,
-              content: memory.content,
-              position: memory.position,
-              size: memory.size,
-              zIndex: memory.zIndex,
-            }),
-          });
+    const response = await fetch(`${apiUrl}/trip/${id}/memories/batch`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ memories: updatedMemories }),
+    });
 
-          if (!response.ok) {
-            throw new Error("Erreur lors de la création");
-          }
-        } else {
-          // Mémoire existante à mettre à jour
-          const response = await fetch(`${apiUrl}/memory/${memory.id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              type: memory.type,
-              content: memory.content,
-              position: memory.position,
-              size: memory.size,
-              zIndex: memory.zIndex,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error("Erreur lors de la mise à jour");
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors de la sauvegarde:", error);
-        throw error;
-      }
+    if (!response.ok) {
+      throw new Error("Erreur lors de la sauvegarde des souvenirs");
     }
 
-    setMemories(updatedMemories);
+    const savedMemories = await response.json();
+    setMemories(savedMemories);
   };
 
   if (isLoading) {

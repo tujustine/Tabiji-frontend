@@ -104,7 +104,6 @@ export default function MemoriesCanvas({
   const [lastModifiedMemoryId, setLastModifiedMemoryId] = useState<
     string | null
   >(null);
-  const pendingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const pendingUploadMemoryIds = useRef<Set<string>>(new Set());
   const memoriesRef = useRef<Memory[]>([]);
   const activeDragMemoryIdRef = useRef<string | null>(null);
@@ -289,15 +288,6 @@ export default function MemoriesCanvas({
     memoriesRef.current = memories;
   }, [memories]);
 
-  useEffect(() => {
-    const timeouts = pendingTimeouts.current;
-
-    return () => {
-      timeouts.forEach((timeoutId) => clearTimeout(timeoutId));
-      timeouts.clear();
-    };
-  }, []);
-
   // Initialiser Socket.IO pour la collaboration en temps réel
   const { socket, isConnected, emit, on, off } = useSocket({
     token: token || undefined,
@@ -376,6 +366,13 @@ export default function MemoriesCanvas({
     [lastModifiedMemoryId],
   );
 
+  const handleMemoriesBatchUpdated = useCallback((data: unknown) => {
+    const typedData = data as { memories: Memory[] };
+    if (!Array.isArray(typedData.memories)) return;
+
+    setMemories(typedData.memories.map(normalizeMemory));
+  }, []);
+
   // Handler pour les changements de titre en temps réel
   const handleTitleUpdated = useCallback(
     (data: unknown) => {
@@ -394,12 +391,14 @@ export default function MemoriesCanvas({
     on("memory:added", handleMemoryAdded);
     on("memory:updated", handleMemoryUpdated);
     on("memory:deleted", handleMemoryDeleted);
+    on("memories:batch-updated", handleMemoriesBatchUpdated);
     on("trip:title-updated", handleTitleUpdated);
 
     return () => {
       off("memory:added", handleMemoryAdded);
       off("memory:updated", handleMemoryUpdated);
       off("memory:deleted", handleMemoryDeleted);
+      off("memories:batch-updated", handleMemoriesBatchUpdated);
       off("trip:title-updated", handleTitleUpdated);
     };
   }, [
@@ -412,6 +411,7 @@ export default function MemoriesCanvas({
     handleMemoryAdded,
     handleMemoryUpdated,
     handleMemoryDeleted,
+    handleMemoriesBatchUpdated,
     handleTitleUpdated,
   ]);
 
@@ -682,68 +682,8 @@ export default function MemoriesCanvas({
     }
   };
 
-  // Persister la disposition d'une mémoire après synchronisation temps réel
-  const persistMemoryLayout = useCallback(
-    async (id: string) => {
-      try {
-        const latestMemories = memoriesRef.current || [];
-        const memoryData = latestMemories.find((m) => m.id === id);
-
-        if (!memoryData) {
-          pendingTimeouts.current.delete(id);
-          return;
-        }
-
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL ||
-          process.env.NEXT_PUBLIC_API_URL_FALLBACK ||
-          "http://localhost:4000";
-
-        const response = await fetch(`${apiUrl}/memory/${id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            position: memoryData.position,
-            size: memoryData.size,
-            zIndex: memoryData.zIndex,
-          }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setMemories((prev) => (prev || []).filter((m) => m.id !== id));
-            pendingTimeouts.current.delete(id);
-            return;
-          }
-          throw new Error("Erreur lors de la mise à jour de la position");
-        }
-
-        pendingTimeouts.current.delete(id);
-      } catch (error) {
-        console.error("Erreur persistance disposition mémoire:", error);
-        pendingTimeouts.current.delete(id);
-      }
-    },
-    [token],
-  );
-
-  const scheduleMemoryLayoutPersistence = useCallback(
-    (id: string) => {
-      const existingTimeout = pendingTimeouts.current.get(id);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-      }
-
-      const timeoutId = setTimeout(() => persistMemoryLayout(id), 2500);
-      pendingTimeouts.current.set(id, timeoutId);
-    },
-    [persistMemoryLayout],
-  );
-
-  // Normaliser la position après le drag et persister avec debounce
+  // Normaliser la position après le drag et diffuser en temps réel.
+  // La persistance DB se fait uniquement via le bouton Sauvegarder.
   const handleDragStop = (id: string) => {
     // Normaliser d'abord localement
     setMemories((prev) => {
@@ -763,7 +703,6 @@ export default function MemoriesCanvas({
     });
 
     activeDragMemoryIdRef.current = null;
-    scheduleMemoryLayoutPersistence(id);
   };
 
   // État pour le modal de redimensionnement
@@ -857,13 +796,6 @@ export default function MemoriesCanvas({
         throw new Error(
           "Erreur lors de la suppression: " + response.statusText,
         );
-      }
-
-      // Annuler tout timeout en cours pour cet élément avant de le supprimer
-      const existingTimeout = pendingTimeouts.current.get(id);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-        pendingTimeouts.current.delete(id);
       }
 
       // Supprimer du state local seulement si la suppression côté serveur a réussi
@@ -1013,7 +945,7 @@ export default function MemoriesCanvas({
     }
   };
 
-  // Mettre au premier plan en temps réel puis persister avec debounce
+  // Mettre au premier plan en temps réel. La persistance DB se fait au bouton Sauvegarder.
   const bringToFront = (id: string) => {
     const currentMemories = memories || [];
     const memoryExists = currentMemories.some((m) => m.id === id);
@@ -1032,7 +964,6 @@ export default function MemoriesCanvas({
     });
 
     emitMemoryRealtimeUpdate(id, { zIndex: newZIndex });
-    scheduleMemoryLayoutPersistence(id);
   };
 
   // Sauvegarder immédiatement toutes les modifications locales
