@@ -1277,9 +1277,7 @@ export default function MemoriesCanvas({
                           }`}
                           value={
                             memory.content ||
-                            (canEdit
-                              ? "Double-clic ou icône crayon pour éditer"
-                              : "Texte")
+                            (canEdit ? "Double-clic pour éditer" : "Texte")
                           }
                           onClick={(e) => {
                             e.stopPropagation();
